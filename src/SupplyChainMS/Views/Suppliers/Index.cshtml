@@ -1,0 +1,94 @@
+@*
+   Views/Suppliers/Index.cshtml
+   Shown to StoreManagers — a directory of all active suppliers.
+   (Suppliers are redirected straight to their Details page by the controller.)
+
+   @model = the type of data passed in from the controller.
+   Here the controller passes List<Supplier>, so the model is a list.
+*@
+
+@model List<SupplyChainMS.Models.Supplier>
+
+@{
+    ViewData["Title"] = "Supplier Directory";
+}
+
+@* ---- PAGE HEADER ---- *@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0"><i class="bi bi-building me-2 text-primary"></i>Supplier Directory</h2>
+        <p class="text-muted mb-0">Browse all active suppliers and their product catalogs</p>
+    </div>
+</div>
+
+@* ---- EMPTY STATE: show a friendly message if no suppliers yet ---- *@
+@if (!Model.Any())
+{
+    <div class="text-center py-5">
+        <i class="bi bi-building display-1 text-muted"></i>
+        <h4 class="mt-3 text-muted">No suppliers available yet</h4>
+        <p class="text-muted">Suppliers will appear here once they register.</p>
+    </div>
+}
+else
+{
+    @* ---- SUPPLIER CARDS GRID ---- *@
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+        @foreach (var supplier in Model)
+        {
+            @*
+               @foreach loops over the list and renders this card for each supplier.
+               In Razor, C# goes inside @{ } blocks or after @ for single expressions.
+            *@
+            <div class="col">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        @* Supplier icon + name *@
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                                <i class="bi bi-building text-primary fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="card-title mb-0">@supplier.CompanyName</h5>
+                                <small class="text-muted">
+                                    <i class="bi bi-box-seam me-1"></i>
+                                    @supplier.Products.Count(p => p.IsActive) product(s)
+                                </small>
+                            </div>
+                        </div>
+
+                        @* Contact info *@
+                        <p class="mb-1 small">
+                            <i class="bi bi-envelope me-1 text-muted"></i>@supplier.ContactEmail
+                        </p>
+                        <p class="mb-1 small">
+                            <i class="bi bi-telephone me-1 text-muted"></i>@supplier.ContactPhone
+                        </p>
+                        <p class="mb-2 small text-muted">
+                            <i class="bi bi-geo-alt me-1"></i>@supplier.Address
+                        </p>
+
+                        @* Description snippet *@
+                        @if (!string.IsNullOrEmpty(supplier.Description))
+                        {
+                            <p class="card-text text-muted small">
+                                @* Truncate long descriptions to 100 characters *@
+                                @(supplier.Description.Length > 100
+                                    ? supplier.Description[..100] + "..."
+                                    : supplier.Description)
+                            </p>
+                        }
+                    </div>
+
+                    <div class="card-footer bg-transparent border-0 pb-3">
+                        @* asp-route-id passes the supplier's Id as a URL parameter: /Suppliers/Details/3 *@
+                        <a asp-action="Details" asp-route-id="@supplier.Id"
+                           class="btn btn-outline-primary btn-sm w-100">
+                            <i class="bi bi-eye me-1"></i>View Profile &amp; Products
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
