@@ -1,0 +1,14 @@
+@* _ViewImports.cshtml — Global imports for ALL .cshtml views
+   ============================================================
+   Think of this like Python's top-level imports in every file,
+   but you only have to write them ONCE here and they apply everywhere.
+
+   @using = imports a C# namespace (like Python's "import")
+   @addTagHelper = enables Tag Helpers (the asp-for, asp-action etc. attributes)
+*@
+
+@using SupplyChainMS
+@using SupplyChainMS.Models
+@using SupplyChainMS.ViewModels
+@using Microsoft.AspNetCore.Identity
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers

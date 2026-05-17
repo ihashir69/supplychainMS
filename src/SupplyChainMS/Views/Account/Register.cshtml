@@ -1,0 +1,87 @@
+@model SupplyChainMS.ViewModels.RegisterViewModel
+
+@{
+    ViewData["Title"] = "Create Account";
+    Layout = "_Layout";
+}
+
+<div class="min-vh-100 d-flex align-items-center justify-content-center bg-light py-5">
+    <div class="col-12 col-md-6 col-lg-5">
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4 p-md-5">
+
+                <div class="text-center mb-4">
+                    <i class="bi bi-boxes text-primary" style="font-size: 3rem;"></i>
+                    <h2 class="fw-bold mt-2">Create Account</h2>
+                    <p class="text-muted">Join the SupplyChain MS platform</p>
+                </div>
+
+                <div asp-validation-summary="All" class="alert alert-danger"></div>
+
+                <form asp-action="Register" asp-controller="Account" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <!-- Full Name -->
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label fw-semibold">Full Name</label>
+                        <input asp-for="FullName" class="form-control" placeholder="Your full name" />
+                        <span asp-validation-for="FullName" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold">Email Address</label>
+                        <input asp-for="Email" class="form-control" placeholder="you@example.com" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Role Selection -->
+                    <div class="mb-3">
+                        <label asp-for="Role" class="form-label fw-semibold">I am a...</label>
+                        @* asp-items generates the <option> tags from a list *@
+                        <select asp-for="Role" class="form-select">
+                            <option value="">-- Select your role --</option>
+                            <option value="Supplier">Supplier (I sell products)</option>
+                            <option value="StoreManager">Store Manager (I manage a store)</option>
+                            <option value="Driver">Driver (I deliver orders)</option>
+                        </select>
+                        <span asp-validation-for="Role" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label fw-semibold">Password</label>
+                        <input asp-for="Password" class="form-control" placeholder="At least 6 characters" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div class="mb-4">
+                        <label asp-for="ConfirmPassword" class="form-label fw-semibold">Confirm Password</label>
+                        <input asp-for="ConfirmPassword" class="form-control" placeholder="Repeat your password" />
+                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg fw-semibold">
+                            <i class="bi bi-person-plus me-2"></i>Create Account
+                        </button>
+                    </div>
+                </form>
+
+                <hr class="my-4" />
+
+                <div class="text-center">
+                    <p class="text-muted mb-0">Already have an account?</p>
+                    <a asp-action="Login" asp-controller="Account" class="fw-semibold">Sign in</a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

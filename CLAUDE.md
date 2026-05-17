@@ -351,28 +351,24 @@ ENTRYPOINT ["dotnet", "SupplyChainMS.dll"]
 ## 🔀 Git Branching Strategy
 
 ```
-main                          ← Production-ready code only (protected branch)
+main                          ← Single integration + production branch
   │
-  ├── develop                 ← Integration branch (merge features here first)
-  │     │
-  │     ├── phase-1/setup     ← Project scaffolding, DB, auth
-  │     ├── phase-2/supplier  ← Supplier management module
-  │     ├── phase-3/store     ← Store & inventory module
-  │     ├── phase-4/orders    ← Order management module
-  │     ├── phase-5/shipment  ← Shipment & delivery tracking
-  │     ├── phase-6/inbox     ← Messaging system
-  │     ├── phase-7/dashboard ← Role-based dashboards
-  │     └── phase-8/deploy    ← Deployment config, final polish
-  │
-  └── hotfix/*                ← Emergency fixes to main
+  ├── phase-1/setup           ← Project scaffolding, DB, auth
+  ├── phase-2/supplier        ← Supplier management module
+  ├── phase-3/store           ← Store & inventory module
+  ├── phase-4/orders          ← Order management module
+  ├── phase-5/shipment        ← Shipment & delivery tracking
+  ├── phase-6/inbox           ← Messaging system
+  ├── phase-7/dashboard       ← Role-based dashboards
+  ├── phase-8/deploy          ← Deployment config, final polish
+  └── hotfix/*                ← Emergency fixes
 ```
 
 ### Branch Rules
 
-- **NEVER push directly to `main`** — always merge from `develop` via Pull Request
-- **NEVER push directly to `develop`** — always merge from a `phase-*` branch
-- Each phase branch is created from `develop` and merged back into `develop` when complete
-- After all phases are done, `develop` → `main` via final PR
+- **NEVER push directly to `main`** — always merge from a `phase-*` branch via Pull Request
+- Each phase branch is created from `main` and merged back into `main` when complete
+- No `develop` branch — `main` is the single integration branch
 
 -----
 

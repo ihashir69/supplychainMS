@@ -1,0 +1,132 @@
+@* ============================================================
+   Login.cshtml — The login page
+   ============================================================
+
+   @model tells Razor: "the data for this view is of type LoginViewModel"
+   It's like Python's type hints — tells us what object we're working with.
+
+   asp-for="Email" = binds the input to model.Email
+   asp-validation-for="Email" = shows validation errors for Email field
+   asp-action / asp-controller = generates the correct URL for the form action
+*@
+
+@model SupplyChainMS.ViewModels.LoginViewModel
+
+@{
+    ViewData["Title"] = "Login";
+    // This disables the sidebar layout for the login page
+    // (we want a centered login box, not a dashboard with sidebar)
+    Layout = "_Layout";
+}
+
+<div class="min-vh-100 d-flex align-items-center justify-content-center bg-light py-5">
+    <div class="col-12 col-md-5 col-lg-4">
+
+        <!-- Card wrapper -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4 p-md-5">
+
+                <!-- Logo / Brand -->
+                <div class="text-center mb-4">
+                    <i class="bi bi-boxes text-primary" style="font-size: 3rem;"></i>
+                    <h2 class="fw-bold mt-2">SupplyChain MS</h2>
+                    <p class="text-muted">Sign in to your account</p>
+                </div>
+
+                <!-- Validation summary — shows any login errors -->
+                @* asp-validation-summary="All" shows all ModelState errors *@
+                <div asp-validation-summary="All" class="alert alert-danger d-none" id="validationSummary"></div>
+
+                <!-- Login Form -->
+                @* asp-action and asp-controller generate: action="/Account/Login" *@
+                <form asp-action="Login" asp-controller="Account" method="post">
+                    @* Anti-forgery token — hidden field that prevents CSRF attacks *@
+                    @Html.AntiForgeryToken()
+
+                    <!-- Email -->
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold">Email address</label>
+                        <input asp-for="Email" class="form-control form-control-lg" placeholder="you@example.com" autocomplete="email" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label fw-semibold">Password</label>
+                        <input asp-for="Password" class="form-control form-control-lg" placeholder="••••••••" autocomplete="current-password" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Remember Me -->
+                    <div class="mb-4 form-check">
+                        <input asp-for="RememberMe" class="form-check-input" />
+                        <label asp-for="RememberMe" class="form-check-label">Remember me</label>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg fw-semibold">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                        </button>
+                    </div>
+                </form>
+
+                <hr class="my-4" />
+
+                <!-- Link to register -->
+                <div class="text-center">
+                    <p class="text-muted mb-0">Don't have an account?</p>
+                    <a asp-action="Register" asp-controller="Account" class="fw-semibold">Create account</a>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Test credentials helper (useful during development/demo) -->
+        <div class="card border-0 bg-transparent mt-3">
+            <div class="card-body p-3">
+                <p class="text-muted small text-center mb-2 fw-semibold">Test Credentials</p>
+                <div class="row g-2 text-center small">
+                    <div class="col-4">
+                        <div class="bg-white rounded p-2 shadow-sm">
+                            <span class="badge bg-warning text-dark mb-1">Supplier</span><br/>
+                            supplier@test.com<br/>
+                            <span class="text-muted">Test@123</span>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-white rounded p-2 shadow-sm">
+                            <span class="badge bg-success mb-1">Store Mgr</span><br/>
+                            storemanager@test.com<br/>
+                            <span class="text-muted">Test@123</span>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-white rounded p-2 shadow-sm">
+                            <span class="badge bg-info text-dark mb-1">Driver</span><br/>
+                            driver@test.com<br/>
+                            <span class="text-muted">Test@123</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    @* Client-side validation scripts — these validate form on the browser
+       BEFORE submitting, giving instant feedback without a server round-trip *@
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script>
+        // Show the validation summary only when it has content
+        document.addEventListener('DOMContentLoaded', function () {
+            var summary = document.getElementById('validationSummary');
+            if (summary && summary.querySelector('ul li')) {
+                summary.classList.remove('d-none');
+            }
+        });
+    </script>
+}
