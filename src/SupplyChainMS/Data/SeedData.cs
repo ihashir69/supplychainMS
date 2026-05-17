@@ -410,6 +410,112 @@ public static class SeedData
                     ("HD Webcam (1080p)", 6), ("USB Headset with Mic", 12), ("Surge Protector (6-outlet)", 20), ("Cable Management Kit", 30));
             }
         }
+
+        // -------------------------------------------------------
+        // SHIPMENTS — create shipments for orders that need them
+        // Only seed if no shipments exist yet
+        // -------------------------------------------------------
+        if (!await context.Shipments.AnyAsync())
+        {
+            var driver = await context.Drivers.FirstOrDefaultAsync();
+            var orders = await context.Orders
+                .Include(o => o.Supplier)
+                .ToListAsync();
+
+            // Find the supplier user IDs for logging (seeded users)
+            var supplierUser1 = await userManager.FindByEmailAsync("supplier@test.com");
+            var supplierUser2 = await userManager.FindByEmailAsync("supplier2@test.com");
+            var supplierUser3 = await userManager.FindByEmailAsync("supplier3@test.com");
+            var driverUser    = await userManager.FindByEmailAsync("driver@test.com");
+
+            var now = DateTime.UtcNow;
+
+            // Helper to seed a shipment with full status history
+            async Task SeedShipment(Order order, int? driverId, string creatorUserId,
+                ShipmentStatus finalStatus, DateTime created, DateTime? estDelivery,
+                params (ShipmentStatus status, DateTime time, string? notes, string userId)[] logs)
+            {
+                if (order == null) return;
+                var shipment = new Shipment
+                {
+                    OrderId = order.Id,
+                    DriverId = driverId,
+                    Status = finalStatus,
+                    TrackingNumber = $"SHP-{created:yyyyMMdd}-{order.Id:D4}",
+                    EstimatedDeliveryDate = estDelivery,
+                    ActualDeliveryDate = finalStatus == ShipmentStatus.Delivered
+                        ? logs.LastOrDefault().time : null,
+                    CreatedAt = created
+                };
+                context.Shipments.Add(shipment);
+                await context.SaveChangesAsync();
+
+                // Add status log entries
+                var logEntries = logs.Select(l => new DeliveryStatusLog
+                {
+                    ShipmentId = shipment.Id,
+                    Status = l.status,
+                    Timestamp = l.time,
+                    Notes = l.notes,
+                    UpdatedByUserId = l.userId
+                }).ToList();
+                context.DeliveryStatusLogs.AddRange(logEntries);
+                await context.SaveChangesAsync();
+            }
+
+            var fulfilledOrders  = orders.Where(o => o.Status == OrderStatus.Fulfilled).ToList();
+            var confirmedOrders  = orders.Where(o => o.Status == OrderStatus.Confirmed).ToList();
+
+            if (fulfilledOrders.Count >= 1 && supplierUser1 != null && driverUser != null)
+            {
+                var o = fulfilledOrders[0]; // Karachi Main — Khan Electronics
+                await SeedShipment(o, driver?.Id, supplierUser1.Id, ShipmentStatus.Delivered,
+                    now.AddDays(-10), now.AddDays(-7),
+                    (ShipmentStatus.Pending,    now.AddDays(-10), "Goods packed and ready for dispatch.", supplierUser1.Id),
+                    (ShipmentStatus.Dispatched, now.AddDays(-9),  "Driver Bilal picked up the shipment.", driverUser.Id),
+                    (ShipmentStatus.InTransit,  now.AddDays(-8),  "En route to Karachi Main Branch.",    driverUser.Id),
+                    (ShipmentStatus.Delivered,  now.AddDays(-7),  "Delivered to branch manager. All items received.", driverUser.Id));
+            }
+
+            if (fulfilledOrders.Count >= 2 && supplierUser2 != null && driverUser != null)
+            {
+                var o = fulfilledOrders[1]; // Islamabad Blue Area — Pak Office
+                await SeedShipment(o, driver?.Id, supplierUser2.Id, ShipmentStatus.Delivered,
+                    now.AddDays(-18), now.AddDays(-15),
+                    (ShipmentStatus.Pending,    now.AddDays(-18), "Office furniture packed.", supplierUser2.Id),
+                    (ShipmentStatus.Dispatched, now.AddDays(-17), "Driver dispatched with full load.", driverUser.Id),
+                    (ShipmentStatus.InTransit,  now.AddDays(-16), "In transit — Karachi to Islamabad.", driverUser.Id),
+                    (ShipmentStatus.Delivered,  now.AddDays(-15), "All 8 chairs and supplies delivered.", driverUser.Id));
+            }
+
+            if (fulfilledOrders.Count >= 3 && supplierUser3 != null && driverUser != null)
+            {
+                var o = fulfilledOrders[2]; // Karachi Gulshan — TechZone
+                await SeedShipment(o, driver?.Id, supplierUser3.Id, ShipmentStatus.Delivered,
+                    now.AddDays(-28), now.AddDays(-25),
+                    (ShipmentStatus.Pending,    now.AddDays(-28), "Tech accessories packaged.", supplierUser3.Id),
+                    (ShipmentStatus.Dispatched, now.AddDays(-27), "Out for delivery.", driverUser.Id),
+                    (ShipmentStatus.Delivered,  now.AddDays(-25), "Delivered to Gulshan branch.", driverUser.Id));
+            }
+
+            // Confirmed orders — create Pending shipments (driver not yet dispatched)
+            if (confirmedOrders.Count >= 1 && supplierUser1 != null)
+            {
+                var o = confirmedOrders[0]; // Lahore Defence — Khan Electronics (Confirmed)
+                await SeedShipment(o, driver?.Id, supplierUser1.Id, ShipmentStatus.Dispatched,
+                    now.AddDays(-2), now.AddDays(1),
+                    (ShipmentStatus.Pending,    now.AddDays(-2), "Goods are packed. Awaiting driver pickup.", supplierUser1.Id),
+                    (ShipmentStatus.Dispatched, now.AddDays(-1), "Driver Bilal has picked up the shipment.", driverUser?.Id != null ? driverUser.Id : supplierUser1.Id));
+            }
+
+            if (confirmedOrders.Count >= 2 && supplierUser3 != null)
+            {
+                var o = confirmedOrders[1]; // Karachi Clifton — TechZone (Confirmed)
+                await SeedShipment(o, null, supplierUser3.Id, ShipmentStatus.Pending,
+                    now.AddHours(-12), now.AddDays(2),
+                    (ShipmentStatus.Pending, now.AddHours(-12), "Monitors and headsets packed, awaiting driver assignment.", supplierUser3.Id));
+            }
+        }
     }
 
     // -------------------------------------------------------

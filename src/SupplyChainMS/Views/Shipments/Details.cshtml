@@ -1,0 +1,283 @@
+@*
+   Views/Shipments/Details.cshtml
+   Full shipment view with:
+   - Header: tracking number, driver, dates
+   - Visual status progress bar
+   - Order items summary
+   - Chronological status log (append-only history)
+   - Action buttons based on role + status
+*@
+
+@model SupplyChainMS.Models.Shipment
+
+@{
+    ViewData["Title"] = $"Shipment {Model.TrackingNumber}";
+    ViewData["ActivePage"] = "Shipments";
+
+    bool isSupplier = User.IsInRole("Supplier");
+    bool isDriver   = User.IsInRole("Driver");
+    bool isHQ       = User.IsInRole("StoreManager");
+
+    bool isTerminal = Model.Status == SupplyChainMS.Models.ShipmentStatus.Delivered ||
+                      Model.Status == SupplyChainMS.Models.ShipmentStatus.Failed;
+    bool canUpdate  = (isDriver || isSupplier) && !isTerminal;
+
+    // Status steps for the progress bar — in order
+    var allStatuses = new[]
+    {
+        SupplyChainMS.Models.ShipmentStatus.Pending,
+        SupplyChainMS.Models.ShipmentStatus.Dispatched,
+        SupplyChainMS.Models.ShipmentStatus.InTransit,
+        SupplyChainMS.Models.ShipmentStatus.Delivered
+    };
+    int currentStep = Array.IndexOf(allStatuses, Model.Status);
+    if (Model.Status == SupplyChainMS.Models.ShipmentStatus.Failed) currentStep = -1;
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">Shipments</a></li>
+        <li class="breadcrumb-item active">@Model.TrackingNumber</li>
+    </ol>
+</nav>
+
+@* ---- SHIPMENT HEADER ---- *@
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <h3 class="mb-1 font-monospace">@Model.TrackingNumber</h3>
+                <div class="d-flex gap-3 text-muted small flex-wrap">
+                    <span><i class="bi bi-shop me-1"></i><strong>Branch:</strong> @Model.Order.Store.Name</span>
+                    <span><i class="bi bi-building me-1"></i><strong>Supplier:</strong> @Model.Order.Supplier.CompanyName</span>
+                    <span><i class="bi bi-receipt me-1"></i><strong>Order:</strong>
+                        <a asp-controller="Orders" asp-action="Details" asp-route-id="@Model.OrderId"
+                           class="text-decoration-none">#@Model.OrderId</a>
+                    </span>
+                </div>
+            </div>
+
+            @* Status badge *@
+            @switch (Model.Status)
+            {
+                case SupplyChainMS.Models.ShipmentStatus.Pending:
+                    <span class="badge bg-secondary fs-6 px-3 py-2">Pending</span>
+                    break;
+                case SupplyChainMS.Models.ShipmentStatus.Dispatched:
+                    <span class="badge bg-warning text-dark fs-6 px-3 py-2">
+                        <i class="bi bi-arrow-up-right me-1"></i>Dispatched
+                    </span>
+                    break;
+                case SupplyChainMS.Models.ShipmentStatus.InTransit:
+                    <span class="badge bg-primary fs-6 px-3 py-2">
+                        <i class="bi bi-truck me-1"></i>In Transit
+                    </span>
+                    break;
+                case SupplyChainMS.Models.ShipmentStatus.Delivered:
+                    <span class="badge bg-success fs-6 px-3 py-2">
+                        <i class="bi bi-check-circle me-1"></i>Delivered
+                    </span>
+                    break;
+                case SupplyChainMS.Models.ShipmentStatus.Failed:
+                    <span class="badge bg-danger fs-6 px-3 py-2">
+                        <i class="bi bi-x-circle me-1"></i>Failed
+                    </span>
+                    break;
+            }
+        </div>
+
+        @* ---- VISUAL PROGRESS STEPS ---- *@
+        @if (Model.Status != SupplyChainMS.Models.ShipmentStatus.Failed)
+        {
+            <div class="mt-4 pt-3 border-top">
+                <div class="d-flex justify-content-between align-items-center">
+                    @for (int i = 0; i < allStatuses.Length; i++)
+                    {
+                        bool done    = i <= currentStep;
+                        bool current = i == currentStep;
+                        <div class="text-center flex-fill">
+                            <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center fw-bold"
+                                 style="width:36px;height:36px;
+                                        background:@(done ? (current ? "#0d6efd" : "#198754") : "#dee2e6");
+                                        color:@(done ? "white" : "#6c757d")">
+                                @if (done && !current)
+                                { <i class="bi bi-check-lg"></i> }
+                                else
+                                { <text>@(i + 1)</text> }
+                            </div>
+                            <small class="d-block mt-1 @(done ? "fw-semibold" : "text-muted")">
+                                @allStatuses[i]
+                            </small>
+                        </div>
+                        @if (i < allStatuses.Length - 1)
+                        {
+                            <div class="flex-fill" style="height:2px;background:@(i < currentStep ? "#198754" : "#dee2e6");margin-top:-20px;"></div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="mt-3 pt-3 border-top">
+                <div class="alert alert-danger mb-0">
+                    <i class="bi bi-x-circle-fill me-2"></i>
+                    <strong>Delivery Failed</strong> — Check the status log below for details.
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    @* ---- DELIVERY INFO ---- *@
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white pt-3 pb-0">
+                <h6 class="fw-semibold mb-0">Delivery Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <p class="text-muted small mb-1">DRIVER</p>
+                        @if (Model.Driver != null)
+                        {
+                            <p class="mb-0 fw-semibold">@Model.Driver.FullName</p>
+                            <small class="text-muted">@Model.Driver.VehicleType — @Model.Driver.VehiclePlate</small>
+                        }
+                        else { <p class="mb-0 text-muted">Not assigned</p> }
+                    </div>
+                    <div class="col-6">
+                        <p class="text-muted small mb-1">CREATED</p>
+                        <p class="mb-0">@Model.CreatedAt.ToString("dd MMM yyyy, HH:mm")</p>
+                    </div>
+                    <div class="col-6">
+                        <p class="text-muted small mb-1">EST. DELIVERY</p>
+                        <p class="mb-0">
+                            @(Model.EstimatedDeliveryDate.HasValue
+                                ? Model.EstimatedDeliveryDate.Value.ToString("dd MMM yyyy")
+                                : "—")
+                        </p>
+                    </div>
+                    <div class="col-6">
+                        <p class="text-muted small mb-1">ACTUAL DELIVERY</p>
+                        <p class="mb-0 @(Model.ActualDeliveryDate.HasValue ? "text-success fw-semibold" : "text-muted")">
+                            @(Model.ActualDeliveryDate.HasValue
+                                ? Model.ActualDeliveryDate.Value.ToString("dd MMM yyyy, HH:mm")
+                                : "—")
+                        </p>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.DeliveryNotes))
+                    {
+                        <div class="col-12">
+                            <p class="text-muted small mb-1">NOTES</p>
+                            <p class="mb-0">@Model.DeliveryNotes</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ---- ORDER ITEMS ---- *@
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white pt-3 pb-0">
+                <h6 class="fw-semibold mb-0">
+                    Items in this Shipment
+                    <small class="text-muted fw-normal">(Order #@Model.OrderId)</small>
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Order.Items)
+                        {
+                            <tr>
+                                <td>@item.Product.Name</td>
+                                <td class="text-center">@item.Quantity</td>
+                                <td class="text-end">PKR @item.LineTotal.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="2" class="text-end fw-bold">Order Total</td>
+                            <td class="text-end fw-bold">PKR @Model.Order.TotalAmount.ToString("N0")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ---- STATUS LOG TIMELINE ---- *@
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white pt-3 pb-0">
+        <h6 class="fw-semibold mb-0">
+            <i class="bi bi-clock-history me-2"></i>Status History
+        </h6>
+    </div>
+    <div class="card-body">
+        @if (!Model.StatusLogs.Any())
+        {
+            <p class="text-muted mb-0">No status updates yet.</p>
+        }
+        else
+        {
+            <div class="timeline">
+                @foreach (var log in Model.StatusLogs.OrderByDescending(l => l.Timestamp))
+                {
+                    var dotColor = log.Status switch
+                    {
+                        SupplyChainMS.Models.ShipmentStatus.Delivered  => "bg-success",
+                        SupplyChainMS.Models.ShipmentStatus.Failed      => "bg-danger",
+                        SupplyChainMS.Models.ShipmentStatus.InTransit   => "bg-primary",
+                        SupplyChainMS.Models.ShipmentStatus.Dispatched  => "bg-warning",
+                        _ => "bg-secondary"
+                    };
+                    <div class="d-flex gap-3 mb-3">
+                        <div class="d-flex flex-column align-items-center">
+                            <div class="rounded-circle @dotColor" style="width:12px;height:12px;margin-top:5px;"></div>
+                            <div class="border-start" style="flex:1;margin-top:4px;"></div>
+                        </div>
+                        <div class="pb-2">
+                            <div class="d-flex gap-2 align-items-center">
+                                <strong>@log.Status</strong>
+                                <small class="text-muted">@log.Timestamp.ToString("dd MMM yyyy, HH:mm")</small>
+                                <small class="text-muted">— @log.UpdatedByUser?.FullName</small>
+                            </div>
+                            @if (!string.IsNullOrEmpty(log.Notes))
+                            {
+                                <p class="mb-0 text-muted small">@log.Notes</p>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@* ---- ACTION BUTTONS ---- *@
+<div class="d-flex gap-2 flex-wrap">
+    @if (canUpdate)
+    {
+        <a asp-action="UpdateStatus" asp-route-id="@Model.Id"
+           class="btn btn-primary">
+            <i class="bi bi-arrow-repeat me-1"></i>Update Delivery Status
+        </a>
+    }
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Shipments
+    </a>
+</div>

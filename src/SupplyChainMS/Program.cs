@@ -23,6 +23,7 @@ using SupplyChainMS.Data;
 using SupplyChainMS.Models;
 using SupplyChainMS.Services;
 using SupplyChainMS.Services.Interfaces;
+// ShipmentService needs IOrderService — both registered as Scoped, so this works.
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -91,6 +92,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IStoreService, StoreService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IShipmentService, ShipmentService>();
 
 // --- MVC Controllers + Razor Views ---
 // This registers the MVC pattern: Controllers handle requests,
