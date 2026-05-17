@@ -90,6 +90,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 // ASP.NET gives it a SupplierService instance automatically.
 builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IStoreService, StoreService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 
 // --- MVC Controllers + Razor Views ---
 // This registers the MVC pattern: Controllers handle requests,

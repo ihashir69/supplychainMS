@@ -127,34 +127,44 @@
                         </li>
                     }
 
-                    @* ---- STORE MANAGER navigation ---- *@
+                    @* ---- STORE MANAGER (HQ) navigation ---- *@
                     @if (User.IsInRole("StoreManager"))
                     {
                         <li class="nav-item mt-3">
-                            <span class="px-3 text-muted small text-uppercase fw-bold">Store</span>
+                            <span class="px-3 text-muted small text-uppercase fw-bold">Branches</span>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Stores" ? "active fw-bold" : "text-secondary")"
+                               asp-controller="Stores" asp-action="Index">
+                                <i class="bi bi-shop me-2"></i>All Branches
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            @* Inventory requires picking a branch — goes to branch list first *@
                             <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Inventory" ? "active fw-bold" : "text-secondary")"
-                               asp-controller="Stores" asp-action="Inventory">
+                               asp-controller="Stores" asp-action="Index">
                                 <i class="bi bi-clipboard-data me-2"></i>Inventory
                             </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <span class="px-3 text-muted small text-uppercase fw-bold">Procurement</span>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Suppliers" ? "active fw-bold" : "text-secondary")"
                                asp-controller="Suppliers" asp-action="Index">
-                                <i class="bi bi-building me-2"></i>Browse Suppliers
+                                <i class="bi bi-building me-2"></i>Suppliers
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Orders" ? "active fw-bold" : "text-secondary")"
                                asp-controller="Orders" asp-action="Index">
-                                <i class="bi bi-cart me-2"></i>My Orders
+                                <i class="bi bi-cart me-2"></i>Orders
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Shipments" ? "active fw-bold" : "text-secondary")"
                                asp-controller="Shipments" asp-action="Index">
-                                <i class="bi bi-geo-alt me-2"></i>Track Deliveries
+                                <i class="bi bi-geo-alt me-2"></i>Deliveries
                             </a>
                         </li>
                     }

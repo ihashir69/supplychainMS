@@ -1,9 +1,12 @@
 // ============================================================
-// Store.cs — A physical store that places orders
+// Store.cs — A physical store/branch managed by HQ
 // ============================================================
 //
-// A store is managed by one StoreManager (ApplicationUser).
-// It holds inventory (products in stock) and places orders to suppliers.
+// Think KFC: HQ manages ALL branch locations centrally.
+// The StoreManager role = HQ. They see ALL stores, not just one.
+//
+// ManagerUserId is nullable — it can record a branch contact person
+// but does NOT restrict who manages this store.
 
 namespace SupplyChainMS.Models;
 
@@ -11,8 +14,8 @@ public class Store
 {
     public int Id { get; set; }
 
-    // Foreign Key → which user manages this store?
-    public string ManagerUserId { get; set; } = string.Empty;
+    // Optional contact person for this branch. NULL = managed directly by HQ.
+    public string? ManagerUserId { get; set; }
 
     public string Name { get; set; } = string.Empty;
 
@@ -30,12 +33,10 @@ public class Store
     // Navigation Properties
     // -------------------------------------------------------
 
-    // The user who manages this store
-    public ApplicationUser Manager { get; set; } = null!;
+    // Optional — null if no specific contact assigned
+    public ApplicationUser? Manager { get; set; }
 
-    // All inventory items (products + quantities) in this store
     public ICollection<InventoryItem> InventoryItems { get; set; } = new List<InventoryItem>();
 
-    // All orders this store has placed
     public ICollection<Order> Orders { get; set; } = new List<Order>();
 }

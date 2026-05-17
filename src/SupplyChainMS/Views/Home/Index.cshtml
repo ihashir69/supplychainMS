@@ -1,4 +1,4 @@
-@* Dashboard — shows different content based on the logged-in user's role *@
+@* Dashboard — live stats from the database for each role *@
 
 @{
     ViewData["Title"] = "Dashboard";
@@ -10,208 +10,381 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="fw-bold mb-0">
-            @if (userRole == "Supplier")
-            { <i class="bi bi-building text-warning me-2"></i> }
-            else if (userRole == "StoreManager")
-            { <i class="bi bi-shop text-success me-2"></i> }
-            else if (userRole == "Driver")
-            { <i class="bi bi-truck text-info me-2"></i> }
-            Welcome, @userName!
+            @if (userRole == "Supplier")      { <i class="bi bi-building text-warning me-2"></i> }
+            else if (userRole == "StoreManager") { <i class="bi bi-shop text-success me-2"></i> }
+            else if (userRole == "Driver")    { <i class="bi bi-truck text-info me-2"></i> }
+            Welcome back, @userName
         </h2>
         <p class="text-muted mb-0">@DateTime.Now.ToString("dddd, dd MMMM yyyy")</p>
     </div>
-    <span class="badge fs-6 @(userRole == "Supplier" ? "bg-warning text-dark" : userRole == "StoreManager" ? "bg-success" : "bg-info text-dark")">
-        @userRole
+    <span class="badge fs-6 px-3 py-2 @(userRole == "Supplier" ? "bg-warning text-dark" : userRole == "StoreManager" ? "bg-success" : "bg-info text-dark")">
+        @(userRole == "StoreManager" ? "HQ Manager" : userRole)
     </span>
 </div>
 
-@* ---- SUPPLIER DASHBOARD ---- *@
+@* ================================================================
+   SUPPLIER DASHBOARD
+   ================================================================ *@
 @if (User.IsInRole("Supplier"))
 {
+    var pendingOrders   = (int)(ViewBag.PendingOrders   ?? 0);
+    var confirmedOrders = (int)(ViewBag.ConfirmedOrders ?? 0);
+    var productCount    = (int)(ViewBag.ProductCount    ?? 0);
+    var recentOrders    = ViewBag.RecentOrders as List<SupplyChainMS.Models.Order>;
+
+    @* --- STAT CARDS --- *@
     <div class="row g-4 mb-4">
-        <div class="col-md-4">
+        <div class="col-sm-6 col-lg-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="bg-warning bg-opacity-10 rounded-3 p-3">
-                        <i class="bi bi-receipt text-warning fs-2"></i>
+                    <div class="rounded-3 p-3 bg-warning bg-opacity-10">
+                        <i class="bi bi-hourglass-split text-warning fs-2"></i>
                     </div>
                     <div>
-                        <p class="text-muted mb-0 small">Pending Orders</p>
-                        <h3 class="fw-bold mb-0">--</h3>
+                        <p class="text-muted mb-0 small">Awaiting Confirmation</p>
+                        <h2 class="fw-bold mb-0 @(pendingOrders > 0 ? "text-warning" : "")">@pendingOrders</h2>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent border-0 pt-0">
-                    <a asp-controller="Orders" asp-action="Index" class="btn btn-sm btn-outline-warning w-100">View Orders</a>
+                    <a asp-controller="Orders" asp-action="Index" class="btn btn-sm btn-outline-warning w-100">
+                        View Incoming Orders
+                    </a>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-sm-6 col-lg-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="bg-primary bg-opacity-10 rounded-3 p-3">
-                        <i class="bi bi-box-seam text-primary fs-2"></i>
+                    <div class="rounded-3 p-3 bg-primary bg-opacity-10">
+                        <i class="bi bi-check-circle text-primary fs-2"></i>
                     </div>
                     <div>
-                        <p class="text-muted mb-0 small">My Products</p>
-                        <h3 class="fw-bold mb-0">--</h3>
+                        <p class="text-muted mb-0 small">Confirmed Orders</p>
+                        <h2 class="fw-bold mb-0">@confirmedOrders</h2>
+                        <small class="text-muted">Ready to ship</small>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent border-0 pt-0">
-                    <a asp-controller="Products" asp-action="Index" class="btn btn-sm btn-outline-primary w-100">Manage Products</a>
+                    <a asp-controller="Shipments" asp-action="Index" class="btn btn-sm btn-outline-primary w-100">
+                        Manage Shipments
+                    </a>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-sm-6 col-lg-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="bg-success bg-opacity-10 rounded-3 p-3">
-                        <i class="bi bi-truck text-success fs-2"></i>
+                    <div class="rounded-3 p-3 bg-success bg-opacity-10">
+                        <i class="bi bi-box-seam text-success fs-2"></i>
                     </div>
                     <div>
-                        <p class="text-muted mb-0 small">Active Shipments</p>
-                        <h3 class="fw-bold mb-0">--</h3>
+                        <p class="text-muted mb-0 small">Active Products</p>
+                        <h2 class="fw-bold mb-0">@productCount</h2>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent border-0 pt-0">
-                    <a asp-controller="Shipments" asp-action="Index" class="btn btn-sm btn-outline-success w-100">Track Shipments</a>
+                    <a asp-controller="Products" asp-action="Index" class="btn btn-sm btn-outline-success w-100">
+                        Manage Products
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-transparent border-0 pt-3 pb-0">
-            <h5 class="fw-semibold">Quick Actions</h5>
+    @* --- QUICK ACTIONS --- *@
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 pt-3 pb-0">
+                    <h6 class="fw-semibold mb-0">Quick Actions</h6>
+                </div>
+                <div class="card-body d-flex flex-wrap gap-2">
+                    <a asp-controller="Products" asp-action="Create" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i>Add Product
+                    </a>
+                    <a asp-controller="Suppliers" asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bi bi-building me-1"></i>My Profile
+                    </a>
+                    <a asp-controller="Orders" asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bi bi-receipt me-1"></i>All Orders
+                    </a>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <div class="d-flex flex-wrap gap-2">
-                <a asp-controller="Products" asp-action="Create" class="btn btn-primary">
-                    <i class="bi bi-plus-circle me-2"></i>Add Product
-                </a>
-                <a asp-controller="Orders" asp-action="Index" class="btn btn-outline-secondary">
-                    <i class="bi bi-receipt me-2"></i>View Incoming Orders
-                </a>
-                <a asp-controller="Messages" asp-action="Inbox" class="btn btn-outline-secondary">
-                    <i class="bi bi-envelope me-2"></i>Inbox
-                </a>
+
+        @* --- RECENT ORDERS FEED --- *@
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 pt-3 pb-0">
+                    <h6 class="fw-semibold mb-0">Recent Orders</h6>
+                </div>
+                <div class="card-body p-0">
+                    @if (recentOrders == null || !recentOrders.Any())
+                    {
+                        <p class="text-muted p-3 mb-0">No orders yet.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var order in recentOrders)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="fw-semibold">#@order.Id</span>
+                                        <small class="text-muted ms-2">@order.Store.Name</small>
+                                    </div>
+                                    @switch (order.Status)
+                                    {
+                                        case SupplyChainMS.Models.OrderStatus.Draft:
+                                            <span class="badge bg-secondary">Draft</span>
+                                            break;
+                                        case SupplyChainMS.Models.OrderStatus.Submitted:
+                                            <span class="badge bg-warning text-dark">Submitted</span>
+                                            break;
+                                        case SupplyChainMS.Models.OrderStatus.Confirmed:
+                                            <span class="badge bg-primary">Confirmed</span>
+                                            break;
+                                        case SupplyChainMS.Models.OrderStatus.Fulfilled:
+                                            <span class="badge bg-success">Fulfilled</span>
+                                            break;
+                                        case SupplyChainMS.Models.OrderStatus.Cancelled:
+                                            <span class="badge bg-danger">Cancelled</span>
+                                            break;
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
             </div>
         </div>
     </div>
 }
 
-@* ---- STORE MANAGER DASHBOARD ---- *@
+@* ================================================================
+   STORE MANAGER (HQ) DASHBOARD
+   ================================================================ *@
 @if (User.IsInRole("StoreManager"))
 {
+    var branchCount          = (int)(ViewBag.BranchCount          ?? 0);
+    var lowStockCount        = (int)(ViewBag.LowStockCount        ?? 0);
+    var activeOrderCount     = (int)(ViewBag.ActiveOrderCount     ?? 0);
+    var pendingSupplierCount = (int)(ViewBag.PendingSupplierCount ?? 0);
+    var recentOrders         = ViewBag.RecentOrders as List<SupplyChainMS.Models.Order>;
+
+    @* --- STAT CARDS --- *@
     <div class="row g-4 mb-4">
-        <div class="col-md-4">
+        <div class="col-sm-6 col-lg-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="bg-danger bg-opacity-10 rounded-3 p-3">
-                        <i class="bi bi-exclamation-triangle text-danger fs-2"></i>
+                    <div class="rounded-3 p-3 bg-primary bg-opacity-10">
+                        <i class="bi bi-shop text-primary fs-2"></i>
                     </div>
                     <div>
-                        <p class="text-muted mb-0 small">Low Stock Alerts</p>
-                        <h3 class="fw-bold mb-0">--</h3>
+                        <p class="text-muted mb-0 small">Total Branches</p>
+                        <h2 class="fw-bold mb-0">@branchCount</h2>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent border-0 pt-0">
-                    <a asp-controller="Stores" asp-action="Inventory" class="btn btn-sm btn-outline-danger w-100">View Inventory</a>
+                    <a asp-controller="Stores" asp-action="Index" class="btn btn-sm btn-outline-primary w-100">
+                        View All Branches
+                    </a>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-sm-6 col-lg-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="bg-primary bg-opacity-10 rounded-3 p-3">
-                        <i class="bi bi-cart text-primary fs-2"></i>
+                    <div class="rounded-3 p-3 @(lowStockCount > 0 ? "bg-danger bg-opacity-10" : "bg-success bg-opacity-10")">
+                        <i class="bi bi-exclamation-triangle @(lowStockCount > 0 ? "text-danger" : "text-success") fs-2"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-0 small">Low Stock Items</p>
+                        <h2 class="fw-bold mb-0 @(lowStockCount > 0 ? "text-danger" : "text-success")">@lowStockCount</h2>
+                        <small class="text-muted">across all branches</small>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 pt-0">
+                    <a asp-controller="Stores" asp-action="Index" class="btn btn-sm @(lowStockCount > 0 ? "btn-danger" : "btn-outline-success") w-100">
+                        @(lowStockCount > 0 ? "Restock Now" : "View Inventory")
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="rounded-3 p-3 bg-warning bg-opacity-10">
+                        <i class="bi bi-hourglass-split text-warning fs-2"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-0 small">Awaiting Supplier</p>
+                        <h2 class="fw-bold mb-0 @(pendingSupplierCount > 0 ? "text-warning" : "")">@pendingSupplierCount</h2>
+                        <small class="text-muted">submitted orders</small>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 pt-0">
+                    <a asp-controller="Orders" asp-action="Index" class="btn btn-sm btn-outline-warning w-100">
+                        Track Orders
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="rounded-3 p-3 bg-success bg-opacity-10">
+                        <i class="bi bi-cart-check text-success fs-2"></i>
                     </div>
                     <div>
                         <p class="text-muted mb-0 small">Active Orders</p>
-                        <h3 class="fw-bold mb-0">--</h3>
+                        <h2 class="fw-bold mb-0">@activeOrderCount</h2>
+                        <small class="text-muted">in progress</small>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent border-0 pt-0">
-                    <a asp-controller="Orders" asp-action="Index" class="btn btn-sm btn-outline-primary w-100">View Orders</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="bg-success bg-opacity-10 rounded-3 p-3">
-                        <i class="bi bi-geo-alt text-success fs-2"></i>
-                    </div>
-                    <div>
-                        <p class="text-muted mb-0 small">Pending Deliveries</p>
-                        <h3 class="fw-bold mb-0">--</h3>
-                    </div>
-                </div>
-                <div class="card-footer bg-transparent border-0 pt-0">
-                    <a asp-controller="Shipments" asp-action="Index" class="btn btn-sm btn-outline-success w-100">Track Deliveries</a>
+                    <a asp-controller="Orders" asp-action="Index" class="btn btn-sm btn-outline-success w-100">
+                        View All Orders
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-transparent border-0 pt-3 pb-0">
-            <h5 class="fw-semibold">Quick Actions</h5>
+    <div class="row g-4">
+        @* --- QUICK ACTIONS --- *@
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pt-3 pb-0">
+                    <h6 class="fw-semibold mb-0">Quick Actions</h6>
+                </div>
+                <div class="card-body d-grid gap-2">
+                    <a asp-controller="Orders" asp-action="Create" class="btn btn-success">
+                        <i class="bi bi-plus-circle me-2"></i>Place New Order
+                    </a>
+                    <a asp-controller="Stores" asp-action="Index" class="btn btn-outline-primary">
+                        <i class="bi bi-shop me-2"></i>Manage Branches
+                    </a>
+                    <a asp-controller="Suppliers" asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bi bi-building me-2"></i>Browse Suppliers
+                    </a>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <div class="d-flex flex-wrap gap-2">
-                <a asp-controller="Orders" asp-action="Create" class="btn btn-success">
-                    <i class="bi bi-plus-circle me-2"></i>Place New Order
-                </a>
-                <a asp-controller="Suppliers" asp-action="Index" class="btn btn-outline-secondary">
-                    <i class="bi bi-building me-2"></i>Browse Suppliers
-                </a>
-                <a asp-controller="Stores" asp-action="Inventory" class="btn btn-outline-secondary">
-                    <i class="bi bi-clipboard-data me-2"></i>Check Inventory
-                </a>
+
+        @* --- RECENT ORDERS --- *@
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-3 pb-0">
+                    <h6 class="fw-semibold mb-0">Recent Orders (All Branches)</h6>
+                    <a asp-controller="Orders" asp-action="Index" class="small text-decoration-none">View all →</a>
+                </div>
+                <div class="card-body p-0">
+                    @if (recentOrders == null || !recentOrders.Any())
+                    {
+                        <p class="text-muted p-3 mb-0">No orders yet. <a asp-controller="Orders" asp-action="Create">Place the first one.</a></p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Branch</th>
+                                        <th>Supplier</th>
+                                        <th>Total</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var order in recentOrders)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <a asp-controller="Orders" asp-action="Details" asp-route-id="@order.Id"
+                                                   class="text-decoration-none fw-semibold">#@order.Id</a>
+                                            </td>
+                                            <td>@order.Store.Name</td>
+                                            <td>@order.Supplier.CompanyName</td>
+                                            <td>PKR @order.TotalAmount.ToString("N0")</td>
+                                            <td>
+                                                @switch (order.Status)
+                                                {
+                                                    case SupplyChainMS.Models.OrderStatus.Draft:
+                                                        <span class="badge bg-secondary">Draft</span>
+                                                        break;
+                                                    case SupplyChainMS.Models.OrderStatus.Submitted:
+                                                        <span class="badge bg-warning text-dark">Submitted</span>
+                                                        break;
+                                                    case SupplyChainMS.Models.OrderStatus.Confirmed:
+                                                        <span class="badge bg-primary">Confirmed</span>
+                                                        break;
+                                                    case SupplyChainMS.Models.OrderStatus.Fulfilled:
+                                                        <span class="badge bg-success">Fulfilled</span>
+                                                        break;
+                                                    case SupplyChainMS.Models.OrderStatus.Cancelled:
+                                                        <span class="badge bg-danger">Cancelled</span>
+                                                        break;
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     </div>
 }
 
-@* ---- DRIVER DASHBOARD ---- *@
+@* ================================================================
+   DRIVER DASHBOARD
+   ================================================================ *@
 @if (User.IsInRole("Driver"))
 {
+    var pendingPickups  = (int)(ViewBag.PendingPickups  ?? 0);
+    var inTransit       = (int)(ViewBag.InTransit       ?? 0);
+    var deliveredToday  = (int)(ViewBag.DeliveredToday  ?? 0);
+
     <div class="row g-4 mb-4">
-        <div class="col-md-4">
+        <div class="col-sm-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="bg-warning bg-opacity-10 rounded-3 p-3">
+                    <div class="rounded-3 p-3 bg-warning bg-opacity-10">
                         <i class="bi bi-hourglass-split text-warning fs-2"></i>
                     </div>
                     <div>
                         <p class="text-muted mb-0 small">Pending Pickups</p>
-                        <h3 class="fw-bold mb-0">--</h3>
+                        <h2 class="fw-bold mb-0 @(pendingPickups > 0 ? "text-warning" : "")">@pendingPickups</h2>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-sm-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                    <div class="rounded-3 p-3 bg-primary bg-opacity-10">
                         <i class="bi bi-truck text-primary fs-2"></i>
                     </div>
                     <div>
                         <p class="text-muted mb-0 small">In Transit</p>
-                        <h3 class="fw-bold mb-0">--</h3>
+                        <h2 class="fw-bold mb-0 @(inTransit > 0 ? "text-primary" : "")">@inTransit</h2>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-sm-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                    <div class="rounded-3 p-3 bg-success bg-opacity-10">
                         <i class="bi bi-check-circle text-success fs-2"></i>
                     </div>
                     <div>
                         <p class="text-muted mb-0 small">Delivered Today</p>
-                        <h3 class="fw-bold mb-0">--</h3>
+                        <h2 class="fw-bold mb-0 text-success">@deliveredToday</h2>
                     </div>
                 </div>
             </div>
@@ -220,17 +393,15 @@
 
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-transparent border-0 pt-3 pb-0">
-            <h5 class="fw-semibold">Quick Actions</h5>
+            <h6 class="fw-semibold mb-0">Quick Actions</h6>
         </div>
-        <div class="card-body">
-            <div class="d-flex flex-wrap gap-2">
-                <a asp-controller="Shipments" asp-action="Index" class="btn btn-primary">
-                    <i class="bi bi-truck me-2"></i>View My Deliveries
-                </a>
-                <a asp-controller="Messages" asp-action="Inbox" class="btn btn-outline-secondary">
-                    <i class="bi bi-envelope me-2"></i>Inbox
-                </a>
-            </div>
+        <div class="card-body d-flex flex-wrap gap-2">
+            <a asp-controller="Shipments" asp-action="Index" class="btn btn-primary">
+                <i class="bi bi-truck me-2"></i>My Deliveries
+            </a>
+            <a asp-controller="Messages" asp-action="Inbox" class="btn btn-outline-secondary">
+                <i class="bi bi-envelope me-2"></i>Inbox
+            </a>
         </div>
     </div>
 }
