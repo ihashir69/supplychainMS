@@ -1,0 +1,34 @@
+# .NET build output — generated files, don't commit these
+bin/
+obj/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+
+# ⚠️ NEVER COMMIT THIS — contains your database password
+src/SupplyChainMS/appsettings.Development.json
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+
+# Rider / JetBrains IDE
+.idea/
+
+# Rider's local settings
+*.DotSettings.user
+
+# User-specific MSBuild properties
+*.user
+
+# NuGet packages directory (restored automatically on build)
+packages/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Migrations (we commit these — they're part of the project)
+# But exclude the snapshot if it causes merge conflicts:
+# Migrations/AppDbContextModelSnapshot.cs

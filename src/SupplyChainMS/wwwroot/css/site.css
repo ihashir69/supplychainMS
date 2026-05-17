@@ -1,0 +1,81 @@
+/* ============================================================
+   site.css — Custom styles on top of Bootstrap 5
+   ============================================================
+   Bootstrap gives us the base. These styles make small tweaks
+   to match our supply chain dashboard look and feel.
+*/
+
+/* Sidebar navigation link styles */
+.sidebar .nav-link {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 2px;
+    font-size: 0.9rem;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Hover effect on sidebar links */
+.sidebar .nav-link:hover {
+    background-color: #e9ecef;
+    color: #0d6efd !important;
+}
+
+/* Active/current page link */
+.sidebar .nav-link.active {
+    background-color: #e7f1ff;
+    color: #0d6efd !important;
+    border-left: 3px solid #0d6efd;
+}
+
+/* Status badge colors for shipment/order statuses */
+.status-draft       { background-color: #6c757d; color: white; }
+.status-submitted   { background-color: #0d6efd; color: white; }
+.status-confirmed   { background-color: #0dcaf0; color: black; }
+.status-fulfilled   { background-color: #198754; color: white; }
+.status-cancelled   { background-color: #dc3545; color: white; }
+.status-pending     { background-color: #ffc107; color: black; }
+.status-dispatched  { background-color: #0d6efd; color: white; }
+.status-intransit   { background-color: #fd7e14; color: white; }
+.status-delivered   { background-color: #198754; color: white; }
+.status-failed      { background-color: #dc3545; color: white; }
+
+/* Cards look cleaner without the default border */
+.card { border-radius: 12px; }
+
+/* Tables in cards */
+.table th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+/* Low stock highlight in inventory tables */
+.low-stock {
+    background-color: #fff3cd !important;
+}
+
+/* Out of stock */
+.out-of-stock {
+    background-color: #f8d7da !important;
+}
+
+/* Form focus styles */
+.form-control:focus,
+.form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+/* Make fixed-top navbar account for content positioning */
+body {
+    background-color: #f8f9fa;
+}
+
+/* Page header section */
+.page-header {
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
