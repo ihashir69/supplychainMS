@@ -1,111 +1,112 @@
 # Phase 3 — Store & Inventory Management ✅ COMPLETE
 
-**Branch:** `phase-3/store`
+**Branch:** `phase-3/store` → merged into `phase-4/orders` (updated during Phase 4)
 **Date completed:** 2026-05-17
 **Status:** Built, compiled (0 errors)
+
+> **Note:** Phase 3 was updated during Phase 4 to fix the store architecture.
+> The original design had one StoreManager per store (one-to-one).
+> This was corrected to HQ model: one StoreManager manages ALL branches.
+> See the "Architecture Change" section below.
 
 ---
 
 ## What Was Built
 
 Store profile management and a full inventory tracker with low-stock alerts.
-StoreManagers can track exactly which products they stock and how many units they have.
+HQ (StoreManager) manages ALL branches centrally — like a KFC headquarters.
 
 ---
 
-## New Files Created
+## Architecture Change (Updated in Phase 4)
 
-### Services/
+**Original (wrong):** One StoreManager user was tied to one specific store via `ManagerUserId` as a required FK.
 
-**`Services/Interfaces/IStoreService.cs`**
-Contract for all store and inventory operations:
-- `GetByUserIdAsync` / `GetByIdAsync` / `GetAllActiveAsync` — store lookups
+**Fixed:** `Store.ManagerUserId` is now nullable. No single-store ownership constraint.
+- `Store.cs` — `ManagerUserId` changed from `string` to `string?`
+- `ApplicationUser.cs` — removed `ManagedStore` navigation property
+- `AppDbContext.cs` — changed one-to-one to optional many-to-one with `SetNull` on delete
+- Migration `HQStoreModel` applied to DB
+
+**What this means:**
+- StoreManager logs in → sees ALL 10 branches, not "their" branch
+- Every page that used `GetCurrentStoreAsync()` was refactored
+- `Inventory(int id)` now takes a `storeId` parameter — HQ picks which branch to inspect
+
+---
+
+## Files
+
+### Services/Interfaces/IStoreService.cs
+- `GetByUserIdAsync` — optional contact lookup (no longer used for access control)
+- `GetByIdAsync` / `GetAllActiveAsync` — store lookups
+- `CreateStoreAsync` — HQ can add new branches *(added in Phase 4)*
 - `UpdateProfileAsync` — save profile changes
-- `GetInventoryAsync` — load full inventory with Product + Supplier joined in
-- `AddInventoryItemAsync` / `UpdateInventoryItemAsync` / `RemoveInventoryItemAsync` — CRUD for stock
-- `IsProductInInventoryAsync` — duplicate check before adding
-- `GetAvailableProductsToAddAsync` — returns only products NOT yet in inventory
+- `GetInventoryAsync(storeId)` — full inventory with Product + Supplier loaded
+- `AddInventoryItemAsync` / `UpdateInventoryItemAsync` / `RemoveInventoryItemAsync`
+- `IsProductInInventoryAsync` / `GetAvailableProductsToAddAsync`
 
-**`Services/StoreService.cs`**
-EF Core implementation. Key pattern used:
-- `.ThenInclude()` for loading grandchild relationships:
-  `InventoryItem → Product → Supplier` (two levels deep)
-- Inventory sorted so low-stock items appear first (urgent items at the top)
+### Services/StoreService.cs
+- EF Core implementation using `.ThenInclude()` for `InventoryItem → Product → Supplier`
+- Inventory sorted: low-stock items first (most urgent at top)
 
----
+### Controllers/StoresController.cs
+- No more `GetCurrentStoreAsync()` — HQ sees everything
+- `Index()` — all branches for both StoreManager and Supplier
+- `Create()` GET/POST — HQ adds a new branch *(added in Phase 4)*
+- `EditProfile(int id)` GET/POST — HQ edits any branch by id
+- `Inventory(int id)` — inventory for a specific branch by id
+- `AddProduct(int storeId)` / `UpdateStock(int id)` / `RemoveProduct(int id)`
 
-### ViewModels/
+### Views/Stores/
+| View | What it shows |
+|------|--------------|
+| `Index.cshtml` | Card grid of all 10 branches; "Inventory" + "Edit" buttons per card; "Add Branch" button for HQ |
+| `Create.cshtml` | Form to add a new branch |
+| `Details.cshtml` | Branch profile with "View Inventory" and "Edit" buttons passing store id |
+| `EditProfile.cshtml` | Edit form for branch name, address, contact |
+| `Inventory.cshtml` | Product table with red/yellow row highlighting; low-stock banner; breadcrumb back to All Branches |
+| `AddProduct.cshtml` | Dropdown of products not yet tracked; quantity + threshold fields |
+| `UpdateStock.cshtml` | Simple form to change quantity and alert threshold |
 
-**`ViewModels/StoreProfileEditViewModel.cs`**
-Edit form for store name, address, phone, email.
-
-**`ViewModels/AddInventoryItemViewModel.cs`**
-"Add product to inventory" form — picks from a dropdown of products not yet tracked.
-Fields: ProductId (dropdown), QuantityInStock, LowStockThreshold.
-
-**`ViewModels/UpdateStockViewModel.cs`**
-Update quantity + threshold for an existing inventory item.
-Includes ProductName and SupplierName as display-only fields.
-
----
-
-### Controllers/
-
-**`Controllers/StoresController.cs`**
-
-| Action | URL | Who | What |
-|--------|-----|-----|------|
-| `Index` | GET /Stores | Both | StoreManager → redirects to own Details; Supplier → all stores list |
-| `Details` | GET /Stores/Details/3 | Both | View store profile |
-| `EditProfile` | GET+POST /Stores/EditProfile | StoreManager | Edit own store |
-| `Inventory` | GET /Stores/Inventory | StoreManager | Full inventory with low stock alerts |
-| `AddProduct` | GET+POST /Stores/AddProduct | StoreManager | Add new product to track |
-| `UpdateStock` | GET+POST /Stores/UpdateStock/7 | StoreManager | Change quantity + threshold |
-| `RemoveProduct` | POST /Stores/RemoveProduct/7 | StoreManager | Remove product from tracking |
+### Sidebar (_Layout.cshtml)
+StoreManager section updated to HQ layout:
+- **Branches** section: "All Branches" + "Inventory" (both go to `/Stores` — HQ picks branch first)
+- **Procurement** section: "Suppliers", "Orders", "Deliveries"
 
 ---
 
-### Views/
+## Seed Data (10 branches)
 
-**`Views/Stores/Index.cshtml`** — Card grid of all stores (Supplier view)
+| # | Branch | City |
+|---|--------|------|
+| 0 | Karachi Main Branch | Karachi |
+| 1 | Karachi Clifton Branch | Karachi |
+| 2 | Karachi Gulshan Branch | Karachi |
+| 3 | Lahore Defence Branch | Lahore |
+| 4 | Lahore Gulberg Branch | Lahore |
+| 5 | Islamabad F-10 Branch | Islamabad |
+| 6 | Islamabad Blue Area Branch | Islamabad |
+| 7 | Rawalpindi Saddar Branch | Rawalpindi |
+| 8 | Faisalabad D-Ground Branch | Faisalabad |
+| 9 | Peshawar University Branch | Peshawar |
 
-**`Views/Stores/Details.cshtml`** — Store profile with Edit + Inventory buttons (StoreManager only)
-
-**`Views/Stores/EditProfile.cshtml`** — Edit form for store info
-
-**`Views/Stores/Inventory.cshtml`** — The main inventory dashboard:
-- Red alert banner if any items are low/out of stock
-- Table with color-coded rows: `table-danger` (red) = out of stock, `table-warning` (yellow) = at/below threshold
-- Low-stock items sorted to the top
-- Inline delete with `confirm()` JS popup (no separate confirmation page needed)
-- Legend at the bottom explaining the color codes
-
-**`Views/Stores/AddProduct.cshtml`** — Dropdown showing products not yet in inventory, with quantity + threshold fields
-
-**`Views/Stores/UpdateStock.cshtml`** — Simple form to update quantity and alert threshold
+Each branch has 4-7 products tracked, with a realistic mix of healthy/low/out-of-stock items.
 
 ---
 
 ## How to Test
 
 1. Login as `storemanager@test.com` / `Test@123`
-   - Sidebar → "Inventory" → empty (no products yet)
-   - Click "Add Product" → dropdown shows all 3 seed products from Khan Electronics
-   - Add USB-C Cable: qty=5, threshold=10 → row should appear yellow (below threshold)
-   - Add HDMI Cable: qty=0, threshold=10 → row should appear red (out of stock)
-   - Add Wireless Mouse: qty=50, threshold=10 → row should appear normal (healthy)
-   - Click pencil icon on USB-C Cable → update qty to 25 → row turns normal
-   - Confirm: alert banner shows "2 item(s) need restocking" initially
-
-2. Login as `supplier@test.com` / `Test@123`
-   - No "Inventory" link in sidebar (correct — suppliers don't see store inventory)
-   - Navigate to /Stores → should see City Centre Electronics store card
+2. Sidebar → "All Branches" → 10 branch cards appear
+3. Click "Inventory" on any card → see that branch's stock with color-coded rows
+4. Red row = out of stock, Yellow row = at/below threshold, Green number = healthy
+5. Click "Add Product" → only shows products NOT already tracked
+6. Click pencil edit button on any item → update quantity or threshold
+7. Click trash → confirm removal
+8. Sidebar → "All Branches" → "Add Branch" button → create a new branch
 
 ---
 
 ## What's Next: Phase 4
-
-**Branch to create:** `phase-4/orders`
-**Depends on:** Phase 2 + Phase 3
-**What gets built:** Order management — StoreManagers place orders to suppliers,
-suppliers confirm or reject, order status flows through the lifecycle.
+Order management — see `PHASE4_COMPLETE.md`.

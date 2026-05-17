@@ -65,6 +65,16 @@ public class StoreService : IStoreService
     }
 
     // -------------------------------------------------------
+    // Create a new store branch
+    // -------------------------------------------------------
+    public async Task CreateStoreAsync(Store store)
+    {
+        store.CreatedAt = DateTime.UtcNow;
+        _context.Stores.Add(store);
+        await _context.SaveChangesAsync();
+    }
+
+    // -------------------------------------------------------
     // Save changes to a store profile
     // -------------------------------------------------------
     public async Task UpdateProfileAsync(Store store)

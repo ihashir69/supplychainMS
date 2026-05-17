@@ -34,6 +34,9 @@ public interface IStoreService
     // Save changes to a store profile.
     Task UpdateProfileAsync(Store store);
 
+    // Create a brand new store branch.
+    Task CreateStoreAsync(Store store);
+
     // -------------------------------------------------------
     // INVENTORY operations
     // -------------------------------------------------------

@@ -89,14 +89,16 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             .OnDelete(DeleteBehavior.Cascade);
 
         // -------------------------------------------------------
-        // ApplicationUser → Store (one-to-one)
-        // One user manages one store.
+        // Store → ApplicationUser (optional many-to-one)
+        // A store CAN have an optional branch contact, but HQ manages all stores.
+        // SetNull: if the contact user is deleted, store stays but loses the FK.
         // -------------------------------------------------------
-        modelBuilder.Entity<ApplicationUser>()
-            .HasOne(u => u.ManagedStore)
-            .WithOne(s => s.Manager)
-            .HasForeignKey<Store>(s => s.ManagerUserId)
-            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<Store>()
+            .HasOne(s => s.Manager)
+            .WithMany()
+            .HasForeignKey(s => s.ManagerUserId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
 
         // -------------------------------------------------------
         // ApplicationUser → Driver (one-to-one)

@@ -1,19 +1,11 @@
 // ============================================================
-// StoresController.cs — Handles all /Stores/* URLs
+// StoresController.cs — HQ manages ALL store branches
 // ============================================================
 //
-// This controller has two audiences:
+// StoreManager = HQ. Sees and manages every branch.
+// No "my store" concept — HQ picks which branch to work with.
 //
-//   STORE MANAGER:
-//     - View and edit their OWN store profile
-//     - Full inventory management (add products, update stock, remove)
-//
-//   SUPPLIER (read-only):
-//     - Browse the list of all stores (their customers)
-//     - View a store's profile (not inventory — that's private)
-//
-// The Inventory actions are StoreManager-only.
-// Store profile viewing is open to both roles.
+// Supplier can browse the branch directory (read-only).
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -32,10 +24,7 @@ public class StoresController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<StoresController> _logger;
 
-    public StoresController(
-        IStoreService storeService,
-        UserManager<ApplicationUser> userManager,
-        ILogger<StoresController> logger)
+    public StoresController(IStoreService storeService, UserManager<ApplicationUser> userManager, ILogger<StoresController> logger)
     {
         _storeService = storeService;
         _userManager = userManager;
@@ -43,385 +32,202 @@ public class StoresController : Controller
     }
 
     // -------------------------------------------------------
-    // Helper: gets the logged-in StoreManager's store.
-    // Returns null if not found.
-    // -------------------------------------------------------
-    private async Task<Store?> GetCurrentStoreAsync()
-    {
-        var user = await _userManager.GetUserAsync(User);
-        if (user == null) return null;
-        return await _storeService.GetByUserIdAsync(user.Id);
-    }
-
-    // -------------------------------------------------------
-    // GET /Stores
-    // StoreManager → redirected to their own store details
-    // Supplier → sees a list of all stores
+    // GET /Stores — all branches for both roles
     // -------------------------------------------------------
     public async Task<IActionResult> Index()
     {
         ViewData["ActivePage"] = "Stores";
-
-        if (User.IsInRole("StoreManager"))
-        {
-            var store = await GetCurrentStoreAsync();
-            if (store == null)
-            {
-                TempData["Error"] = "Store profile not found. Please contact support.";
-                return RedirectToAction("Index", "Home");
-            }
-            return RedirectToAction(nameof(Details), new { id = store.Id });
-        }
-
-        var stores = await _storeService.GetAllActiveAsync();
-        return View(stores);
+        return View(await _storeService.GetAllActiveAsync());
     }
 
     // -------------------------------------------------------
     // GET /Stores/Details/3
-    // View a store's profile. Both roles can access.
     // -------------------------------------------------------
     public async Task<IActionResult> Details(int id)
     {
         ViewData["ActivePage"] = "Stores";
-
         var store = await _storeService.GetByIdAsync(id);
-        if (store == null)
-        {
-            TempData["Error"] = "Store not found.";
-            return RedirectToAction(nameof(Index));
-        }
-
+        if (store == null) { TempData["Error"] = "Branch not found."; return RedirectToAction(nameof(Index)); }
         return View(store);
     }
 
     // -------------------------------------------------------
-    // GET /Stores/EditProfile
-    // StoreManager edits their own store's profile.
+    // GET /Stores/Create — HQ adds a new branch
     // -------------------------------------------------------
     [Authorize(Roles = "StoreManager")]
-    public async Task<IActionResult> EditProfile()
+    public IActionResult Create()
     {
         ViewData["ActivePage"] = "Stores";
-
-        var store = await GetCurrentStoreAsync();
-        if (store == null)
-        {
-            TempData["Error"] = "Store profile not found.";
-            return RedirectToAction("Index", "Home");
-        }
-
-        var viewModel = new StoreProfileEditViewModel
-        {
-            Id = store.Id,
-            Name = store.Name,
-            Address = store.Address,
-            ContactPhone = store.ContactPhone,
-            ContactEmail = store.ContactEmail
-        };
-
-        return View(viewModel);
+        return View(new StoreProfileEditViewModel());
     }
 
-    // -------------------------------------------------------
-    // POST /Stores/EditProfile
-    // -------------------------------------------------------
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Authorize(Roles = "StoreManager")]
-    public async Task<IActionResult> EditProfile(StoreProfileEditViewModel viewModel)
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "StoreManager")]
+    public async Task<IActionResult> Create(StoreProfileEditViewModel vm)
     {
         ViewData["ActivePage"] = "Stores";
-
-        if (!ModelState.IsValid)
-            return View(viewModel);
-
-        var user = await _userManager.GetUserAsync(User);
-        var existingStore = await _storeService.GetByUserIdAsync(user!.Id);
-
-        if (existingStore == null || existingStore.Id != viewModel.Id)
-        {
-            TempData["Error"] = "Unauthorized action.";
-            return RedirectToAction("Index", "Home");
-        }
-
-        existingStore.Name = viewModel.Name;
-        existingStore.Address = viewModel.Address;
-        existingStore.ContactPhone = viewModel.ContactPhone;
-        existingStore.ContactEmail = viewModel.ContactEmail;
-
+        if (!ModelState.IsValid) return View(vm);
         try
         {
-            await _storeService.UpdateProfileAsync(existingStore);
-            TempData["Success"] = "Store profile updated successfully!";
-            return RedirectToAction(nameof(Details), new { id = existingStore.Id });
+            await _storeService.CreateStoreAsync(new Store
+            {
+                Name = vm.Name, Address = vm.Address,
+                ContactPhone = vm.ContactPhone, ContactEmail = vm.ContactEmail, IsActive = true
+            });
+            TempData["Success"] = $"Branch '{vm.Name}' created!";
+            return RedirectToAction(nameof(Index));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating store profile for user {UserId}", user.Id);
-            TempData["Error"] = "An error occurred while saving. Please try again.";
-            return View(viewModel);
+            _logger.LogError(ex, "Error creating branch");
+            TempData["Error"] = "An error occurred. Please try again.";
+            return View(vm);
         }
     }
 
     // -------------------------------------------------------
-    // GET /Stores/Inventory
-    // Shows the store's full inventory with low stock alerts.
-    // Linked directly from the sidebar.
+    // GET /Stores/EditProfile/3 — HQ edits any branch
     // -------------------------------------------------------
     [Authorize(Roles = "StoreManager")]
-    public async Task<IActionResult> Inventory()
+    public async Task<IActionResult> EditProfile(int id)
+    {
+        ViewData["ActivePage"] = "Stores";
+        var store = await _storeService.GetByIdAsync(id);
+        if (store == null) { TempData["Error"] = "Branch not found."; return RedirectToAction(nameof(Index)); }
+        return View(new StoreProfileEditViewModel
+        {
+            Id = store.Id, Name = store.Name, Address = store.Address,
+            ContactPhone = store.ContactPhone, ContactEmail = store.ContactEmail
+        });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "StoreManager")]
+    public async Task<IActionResult> EditProfile(StoreProfileEditViewModel vm)
+    {
+        ViewData["ActivePage"] = "Stores";
+        if (!ModelState.IsValid) return View(vm);
+        var store = await _storeService.GetByIdAsync(vm.Id);
+        if (store == null) { TempData["Error"] = "Branch not found."; return RedirectToAction(nameof(Index)); }
+        store.Name = vm.Name; store.Address = vm.Address;
+        store.ContactPhone = vm.ContactPhone; store.ContactEmail = vm.ContactEmail;
+        try
+        {
+            await _storeService.UpdateProfileAsync(store);
+            TempData["Success"] = "Branch updated!";
+            return RedirectToAction(nameof(Details), new { id = vm.Id });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating branch {Id}", vm.Id);
+            TempData["Error"] = "An error occurred.";
+            return View(vm);
+        }
+    }
+
+    // -------------------------------------------------------
+    // GET /Stores/Inventory/3 — inventory for branch with id=3
+    // -------------------------------------------------------
+    [Authorize(Roles = "StoreManager")]
+    public async Task<IActionResult> Inventory(int id)
     {
         ViewData["ActivePage"] = "Inventory";
-
-        var store = await GetCurrentStoreAsync();
-        if (store == null)
-        {
-            TempData["Error"] = "Store profile not found.";
-            return RedirectToAction("Index", "Home");
-        }
-
-        var inventory = await _storeService.GetInventoryAsync(store.Id);
-
-        // Pass store info to the view for the page heading
+        var store = await _storeService.GetByIdAsync(id);
+        if (store == null) { TempData["Error"] = "Branch not found."; return RedirectToAction(nameof(Index)); }
+        var inventory = await _storeService.GetInventoryAsync(id);
         ViewBag.Store = store;
-
-        // Count how many items are at or below threshold (for the alert badge)
         ViewBag.LowStockCount = inventory.Count(i => i.QuantityInStock <= i.LowStockThreshold);
-
         return View(inventory);
     }
 
     // -------------------------------------------------------
-    // GET /Stores/AddProduct
-    // Form to add a new product to the store's inventory.
+    // GET /Stores/AddProduct?storeId=3
     // -------------------------------------------------------
     [Authorize(Roles = "StoreManager")]
-    public async Task<IActionResult> AddProduct()
+    public async Task<IActionResult> AddProduct(int storeId)
     {
         ViewData["ActivePage"] = "Inventory";
-
-        var store = await GetCurrentStoreAsync();
-        if (store == null)
-        {
-            TempData["Error"] = "Store profile not found.";
-            return RedirectToAction("Index", "Home");
-        }
-
-        // Load only the products not already in inventory
-        var availableProducts = await _storeService.GetAvailableProductsToAddAsync(store.Id);
-
-        if (!availableProducts.Any())
-        {
-            TempData["Success"] = "All available products are already in your inventory!";
-            return RedirectToAction(nameof(Inventory));
-        }
-
-        // Build a SelectList for the dropdown.
-        // Format: "SupplierName — ProductName (PKR price/unit)"
-        // SelectList(items, valueField, textField) — "valueField" is what gets submitted,
-        // "textField" is what the user sees in the dropdown.
-        var selectItems = availableProducts.Select(p => new SelectListItem
-        {
-            Value = p.Id.ToString(),
-            Text = $"{p.Supplier.CompanyName} — {p.Name} (PKR {p.UnitPrice:N0}/{p.Unit})"
-        });
-
-        ViewBag.ProductList = new SelectList(selectItems, "Value", "Text");
-        ViewBag.StoreId = store.Id;
-
-        var viewModel = new AddInventoryItemViewModel
-        {
-            StoreId = store.Id,
-            LowStockThreshold = 10
-        };
-
-        return View(viewModel);
+        var store = await _storeService.GetByIdAsync(storeId);
+        if (store == null) { TempData["Error"] = "Branch not found."; return RedirectToAction(nameof(Index)); }
+        var available = await _storeService.GetAvailableProductsToAddAsync(storeId);
+        if (!available.Any()) { TempData["Success"] = "All products already tracked!"; return RedirectToAction(nameof(Inventory), new { id = storeId }); }
+        ViewBag.ProductList = new SelectList(
+            available.Select(p => new SelectListItem { Value = p.Id.ToString(), Text = $"{p.Supplier.CompanyName} — {p.Name} (PKR {p.UnitPrice:N0}/{p.Unit})" }),
+            "Value", "Text");
+        ViewBag.Store = store;
+        return View(new AddInventoryItemViewModel { StoreId = storeId, LowStockThreshold = 10 });
     }
 
-    // -------------------------------------------------------
-    // POST /Stores/AddProduct
-    // -------------------------------------------------------
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Authorize(Roles = "StoreManager")]
-    public async Task<IActionResult> AddProduct(AddInventoryItemViewModel viewModel)
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "StoreManager")]
+    public async Task<IActionResult> AddProduct(AddInventoryItemViewModel vm)
     {
         ViewData["ActivePage"] = "Inventory";
-
-        var store = await GetCurrentStoreAsync();
-        if (store == null || store.Id != viewModel.StoreId)
-        {
-            TempData["Error"] = "Unauthorized action.";
-            return RedirectToAction("Index", "Home");
-        }
-
         if (!ModelState.IsValid)
         {
-            // Re-populate the dropdown before returning to the form
-            var availableProducts = await _storeService.GetAvailableProductsToAddAsync(store.Id);
-            var selectItems = availableProducts.Select(p => new SelectListItem
-            {
-                Value = p.Id.ToString(),
-                Text = $"{p.Supplier.CompanyName} — {p.Name} (PKR {p.UnitPrice:N0}/{p.Unit})"
-            });
-            ViewBag.ProductList = new SelectList(selectItems, "Value", "Text");
-            ViewBag.StoreId = store.Id;
-            return View(viewModel);
+            var store = await _storeService.GetByIdAsync(vm.StoreId);
+            var available = await _storeService.GetAvailableProductsToAddAsync(vm.StoreId);
+            ViewBag.ProductList = new SelectList(available.Select(p => new SelectListItem { Value = p.Id.ToString(), Text = $"{p.Supplier.CompanyName} — {p.Name} (PKR {p.UnitPrice:N0}/{p.Unit})" }), "Value", "Text");
+            ViewBag.Store = store;
+            return View(vm);
         }
-
-        // Check for duplicate
-        var alreadyExists = await _storeService.IsProductInInventoryAsync(store.Id, viewModel.ProductId);
-        if (alreadyExists)
-        {
-            TempData["Error"] = "This product is already in your inventory. Use 'Update Stock' to change the quantity.";
-            return RedirectToAction(nameof(Inventory));
-        }
-
-        var item = new InventoryItem
-        {
-            StoreId = store.Id,
-            ProductId = viewModel.ProductId,
-            QuantityInStock = viewModel.QuantityInStock,
-            LowStockThreshold = viewModel.LowStockThreshold
-        };
-
+        if (await _storeService.IsProductInInventoryAsync(vm.StoreId, vm.ProductId))
+        { TempData["Error"] = "Product already tracked."; return RedirectToAction(nameof(Inventory), new { id = vm.StoreId }); }
         try
         {
-            await _storeService.AddInventoryItemAsync(item);
+            await _storeService.AddInventoryItemAsync(new InventoryItem { StoreId = vm.StoreId, ProductId = vm.ProductId, QuantityInStock = vm.QuantityInStock, LowStockThreshold = vm.LowStockThreshold });
             TempData["Success"] = "Product added to inventory!";
-            return RedirectToAction(nameof(Inventory));
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error adding product {ProductId} to store {StoreId}", viewModel.ProductId, store.Id);
-            TempData["Error"] = "An error occurred. Please try again.";
-            return RedirectToAction(nameof(Inventory));
-        }
+        catch (Exception ex) { _logger.LogError(ex, "Error adding product to store {StoreId}", vm.StoreId); TempData["Error"] = "An error occurred."; }
+        return RedirectToAction(nameof(Inventory), new { id = vm.StoreId });
     }
 
     // -------------------------------------------------------
-    // GET /Stores/UpdateStock/7
-    // Form to update stock quantity + low stock threshold.
+    // GET /Stores/UpdateStock/7 — inventory item id=7
     // -------------------------------------------------------
     [Authorize(Roles = "StoreManager")]
     public async Task<IActionResult> UpdateStock(int id)
     {
         ViewData["ActivePage"] = "Inventory";
-
-        var store = await GetCurrentStoreAsync();
-        if (store == null)
-        {
-            TempData["Error"] = "Store profile not found.";
-            return RedirectToAction("Index", "Home");
-        }
-
         var item = await _storeService.GetInventoryItemAsync(id);
-        if (item == null || item.StoreId != store.Id)
+        if (item == null) { TempData["Error"] = "Item not found."; return RedirectToAction(nameof(Index)); }
+        ViewBag.StoreId = item.StoreId;
+        return View(new UpdateStockViewModel
         {
-            TempData["Error"] = "Inventory item not found or access denied.";
-            return RedirectToAction(nameof(Inventory));
-        }
-
-        var viewModel = new UpdateStockViewModel
-        {
-            InventoryItemId = item.Id,
-            ProductName = item.Product.Name,
+            InventoryItemId = item.Id, ProductName = item.Product.Name,
             SupplierName = item.Product.Supplier.CompanyName,
-            QuantityInStock = item.QuantityInStock,
-            LowStockThreshold = item.LowStockThreshold
-        };
-
-        return View(viewModel);
+            QuantityInStock = item.QuantityInStock, LowStockThreshold = item.LowStockThreshold
+        });
     }
 
-    // -------------------------------------------------------
-    // POST /Stores/UpdateStock/7
-    // -------------------------------------------------------
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Authorize(Roles = "StoreManager")]
-    public async Task<IActionResult> UpdateStock(UpdateStockViewModel viewModel)
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "StoreManager")]
+    public async Task<IActionResult> UpdateStock(UpdateStockViewModel vm)
     {
         ViewData["ActivePage"] = "Inventory";
-
-        if (!ModelState.IsValid)
-            return View(viewModel);
-
-        var store = await GetCurrentStoreAsync();
-        if (store == null)
-        {
-            TempData["Error"] = "Store profile not found.";
-            return RedirectToAction("Index", "Home");
-        }
-
-        var item = await _storeService.GetInventoryItemAsync(viewModel.InventoryItemId);
-        if (item == null || item.StoreId != store.Id)
-        {
-            TempData["Error"] = "Unauthorized action.";
-            return RedirectToAction(nameof(Inventory));
-        }
-
-        // Update only the fields the StoreManager can change.
-        // We re-use the fetched item but need a tracked version for update.
-        var updatedItem = new InventoryItem
-        {
-            Id = item.Id,
-            StoreId = item.StoreId,
-            ProductId = item.ProductId,
-            QuantityInStock = viewModel.QuantityInStock,
-            LowStockThreshold = viewModel.LowStockThreshold
-        };
-
+        if (!ModelState.IsValid) return View(vm);
+        var item = await _storeService.GetInventoryItemAsync(vm.InventoryItemId);
+        if (item == null) { TempData["Error"] = "Item not found."; return RedirectToAction(nameof(Index)); }
         try
         {
-            await _storeService.UpdateInventoryItemAsync(updatedItem);
-            TempData["Success"] = $"Stock updated for {viewModel.ProductName}.";
-            return RedirectToAction(nameof(Inventory));
+            await _storeService.UpdateInventoryItemAsync(new InventoryItem { Id = item.Id, StoreId = item.StoreId, ProductId = item.ProductId, QuantityInStock = vm.QuantityInStock, LowStockThreshold = vm.LowStockThreshold });
+            TempData["Success"] = $"Stock updated for {vm.ProductName}.";
+            return RedirectToAction(nameof(Inventory), new { id = item.StoreId });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating stock for inventory item {ItemId}", viewModel.InventoryItemId);
-            TempData["Error"] = "An error occurred. Please try again.";
-            return View(viewModel);
-        }
+        catch (Exception ex) { _logger.LogError(ex, "Error updating stock {Id}", vm.InventoryItemId); TempData["Error"] = "An error occurred."; return View(vm); }
     }
 
     // -------------------------------------------------------
     // POST /Stores/RemoveProduct/7
-    // Removes a product from inventory (no confirmation page —
-    // the Inventory view has an inline confirmation via JavaScript).
     // -------------------------------------------------------
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Authorize(Roles = "StoreManager")]
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "StoreManager")]
     public async Task<IActionResult> RemoveProduct(int id)
     {
-        var store = await GetCurrentStoreAsync();
-        if (store == null)
-        {
-            TempData["Error"] = "Store profile not found.";
-            return RedirectToAction("Index", "Home");
-        }
-
         var item = await _storeService.GetInventoryItemAsync(id);
-        if (item == null || item.StoreId != store.Id)
-        {
-            TempData["Error"] = "Unauthorized action.";
-            return RedirectToAction(nameof(Inventory));
-        }
-
+        if (item == null) { TempData["Error"] = "Item not found."; return RedirectToAction(nameof(Index)); }
+        var storeId = item.StoreId;
         try
         {
             await _storeService.RemoveInventoryItemAsync(id);
             TempData["Success"] = $"{item.Product.Name} removed from inventory.";
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error removing inventory item {ItemId}", id);
-            TempData["Error"] = "Could not remove product. It may be linked to existing orders.";
-        }
-
-        return RedirectToAction(nameof(Inventory));
+        catch (Exception ex) { _logger.LogError(ex, "Error removing item {Id}", id); TempData["Error"] = "Cannot remove — may be linked to orders."; }
+        return RedirectToAction(nameof(Inventory), new { id = storeId });
     }
 }

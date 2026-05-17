@@ -47,8 +47,7 @@ public class ApplicationUser : IdentityUser
     // "?" means nullable — StoreManagers and Drivers won't have this.
     public Supplier? SupplierProfile { get; set; }
 
-    // If this user is a StoreManager, they manage one store.
-    public Store? ManagedStore { get; set; }
+    // StoreManager role = HQ managing ALL stores — no single store assigned here.
 
     // If this user is a Driver, they have one driver profile.
     public Driver? DriverProfile { get; set; }

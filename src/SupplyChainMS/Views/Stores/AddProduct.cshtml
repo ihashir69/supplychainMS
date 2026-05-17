@@ -13,7 +13,8 @@
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
-        <li class="breadcrumb-item"><a asp-action="Inventory">Inventory</a></li>
+        <li class="breadcrumb-item"><a asp-controller="Stores" asp-action="Index">All Branches</a></li>
+        <li class="breadcrumb-item"><a asp-action="Inventory" asp-route-id="@Model.StoreId">Inventory</a></li>
         <li class="breadcrumb-item active">Add Product</li>
     </ol>
 </nav>
@@ -70,7 +71,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-plus-circle me-1"></i>Add to Inventory
                         </button>
-                        <a asp-action="Inventory" class="btn btn-outline-secondary">
+                        <a asp-action="Inventory" asp-route-id="@Model.StoreId" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg me-1"></i>Cancel
                         </a>
                     </div>

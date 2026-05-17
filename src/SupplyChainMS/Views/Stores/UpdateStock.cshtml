@@ -12,7 +12,8 @@
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
-        <li class="breadcrumb-item"><a asp-action="Inventory">Inventory</a></li>
+        <li class="breadcrumb-item"><a asp-controller="Stores" asp-action="Index">All Branches</a></li>
+        <li class="breadcrumb-item"><a asp-action="Inventory" asp-route-id="@ViewBag.StoreId">Inventory</a></li>
         <li class="breadcrumb-item active">Update Stock</li>
     </ol>
 </nav>
@@ -59,7 +60,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-floppy me-1"></i>Save
                         </button>
-                        <a asp-action="Inventory" class="btn btn-outline-secondary">
+                        <a asp-action="Inventory" asp-route-id="@ViewBag.StoreId" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg me-1"></i>Cancel
                         </a>
                     </div>
