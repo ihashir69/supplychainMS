@@ -213,8 +213,17 @@
     @if (Model.Status == SupplyChainMS.Models.OrderStatus.Confirmed && Model.Shipment == null && isSupplier)
     {
         <a asp-controller="Shipments" asp-action="Create" asp-route-orderId="@Model.Id"
-           class="btn btn-warning">
+           class="btn btn-warning btn-lg">
             <i class="bi bi-truck me-1"></i>Create Shipment
+        </a>
+    }
+
+    @* If shipment already exists, show a View Shipment link *@
+    @if (Model.Shipment != null)
+    {
+        <a asp-controller="Shipments" asp-action="Details" asp-route-id="@Model.Shipment.Id"
+           class="btn btn-outline-primary">
+            <i class="bi bi-truck me-1"></i>Track Shipment @Model.Shipment.TrackingNumber
         </a>
     }
 
