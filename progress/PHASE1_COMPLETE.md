@@ -6,6 +6,127 @@
 
 ---
 
+## What You Need to Install (Prerequisites)
+
+Before anyone can run this project on a new machine, they need these 4 things installed.
+
+---
+
+### 1. .NET 8 SDK
+This is the compiler and runtime — without it nothing works. It's like installing Python itself.
+
+**Download:** https://dotnet.microsoft.com/download/dotnet/8.0
+- Click **.NET SDK** → **Windows x64 Installer**
+- Run the `.exe`, click through the installer
+- **Close and reopen** any terminal/VS Code after installing
+
+**Verify it worked:**
+```bash
+dotnet --version
+# Should print: 8.0.xxx
+```
+
+---
+
+### 2. dotnet-ef (EF Core CLI tool)
+This is the command-line tool for creating and applying database migrations.
+Like `python manage.py` in Django — it's how you create and update database tables.
+
+**Install it** (run once after installing .NET SDK):
+```bash
+dotnet tool install --global dotnet-ef
+```
+
+**Verify:**
+```bash
+dotnet ef --version
+# Should print a version number
+```
+
+> Note: if `dotnet ef` is not found after installing, close and reopen your terminal.
+
+---
+
+### 3. Git
+For cloning the repo and switching branches. You probably already have this.
+
+**Download:** https://git-scm.com/download/win
+- Use all default settings during install
+
+**Verify:**
+```bash
+git --version
+```
+
+---
+
+### 4. VS Code (recommended editor)
+Any text editor works, but VS Code with the C# extension gives you autocomplete and error highlighting.
+
+**Download:** https://code.visualstudio.com
+
+**Install this VS Code extension:**
+- Open VS Code → Extensions (Ctrl+Shift+X) → search **"C# Dev Kit"** → Install
+- This gives you syntax highlighting, IntelliSense (autocomplete), and error squiggles
+
+---
+
+### Full Setup Steps (for a new machine from scratch)
+
+```
+Step 1: Install .NET 8 SDK         (link above)
+Step 2: Install dotnet-ef tool      (command above)
+Step 3: Install Git                 (link above)
+Step 4: Install VS Code + C# Dev Kit extension
+Step 5: Clone the repo
+Step 6: Create appsettings.Development.json with Supabase connection string
+Step 7: Run the app
+```
+
+#### Step 5 — Clone the repo
+```bash
+git clone https://github.com/ihashir69/supplychainMS.git
+cd supplychainMS
+```
+
+#### Step 6 — Create the secret config file
+This file is git-ignored (not on GitHub) because it contains the database password.
+You must create it manually on every new machine.
+
+Create this file: `src/SupplyChainMS/appsettings.Development.json`
+
+Paste this content and fill in the Supabase details:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=YOUR_SUPABASE_HOST;Port=5432;Database=postgres;Username=postgres.YOUR_PROJECT_REF;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}
+```
+
+Get the connection string from: **Supabase Dashboard → Project Settings → Database → Connection Pooling → Session mode**
+
+#### Step 7 — Run the app
+```bash
+cd src/SupplyChainMS
+
+# First time only — applies migrations to create all tables
+dotnet ef database update
+
+# Start the app (seed data runs automatically on first start)
+dotnet run
+```
+
+Open browser at: **http://localhost:5226**
+
+---
+
 ## What Was Built
 
 ### 1. Project Structure
