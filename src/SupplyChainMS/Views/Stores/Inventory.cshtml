@@ -1,0 +1,166 @@
+@*
+   Views/Stores/Inventory.cshtml
+   The main inventory dashboard for StoreManagers.
+   Shows all tracked products with color-coded stock levels.
+   Low-stock items are sorted to the top and highlighted in red.
+*@
+
+@model List<SupplyChainMS.Models.InventoryItem>
+
+@{
+    ViewData["Title"] = "Inventory";
+    var store = ViewBag.Store as SupplyChainMS.Models.Store;
+    int lowStockCount = ViewBag.LowStockCount;
+}
+
+@* ---- BREADCRUMB ---- *@
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
+        <li class="breadcrumb-item active">Inventory</li>
+    </ol>
+</nav>
+
+@* ---- HEADER ---- *@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0"><i class="bi bi-clipboard-data me-2 text-primary"></i>Inventory</h2>
+        <p class="text-muted mb-0">@store?.Name — @Model.Count product(s) tracked</p>
+    </div>
+    <a asp-action="AddProduct" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Add Product
+    </a>
+</div>
+
+@* ---- LOW STOCK ALERT BANNER ---- *@
+@if (lowStockCount > 0)
+{
+    <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i>
+        <div>
+            <strong>@lowStockCount item(s) need restocking</strong> — highlighted in red below.
+            Consider placing orders with suppliers.
+        </div>
+    </div>
+}
+
+@* ---- EMPTY STATE ---- *@
+@if (!Model.Any())
+{
+    <div class="text-center py-5">
+        <i class="bi bi-clipboard display-1 text-muted"></i>
+        <h4 class="mt-3 text-muted">No products in inventory yet</h4>
+        <p class="text-muted">Add products from supplier catalogs to start tracking stock.</p>
+        <a asp-action="AddProduct" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Add First Product
+        </a>
+    </div>
+}
+else
+{
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product</th>
+                            <th>Supplier</th>
+                            <th>Category</th>
+                            <th class="text-center">In Stock</th>
+                            <th class="text-center">Alert Threshold</th>
+                            <th>Last Updated</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            @* Is this item at or below its low stock threshold? *@
+                            bool isLow = item.QuantityInStock <= item.LowStockThreshold;
+                            bool isOut = item.QuantityInStock == 0;
+
+                            @*
+                               Apply a red background to the whole row if low stock.
+                               "table-danger" is a Bootstrap class that makes the row red.
+                               "table-warning" makes it yellow.
+                            *@
+                            <tr class="@(isOut ? "table-danger" : isLow ? "table-warning" : "")">
+                                <td>
+                                    <strong>@item.Product.Name</strong>
+                                    <br />
+                                    <small class="text-muted">@item.Product.Unit</small>
+                                </td>
+                                <td>
+                                    <a asp-controller="Suppliers" asp-action="Details"
+                                       asp-route-id="@item.Product.SupplierId"
+                                       class="text-decoration-none">
+                                        @item.Product.Supplier.CompanyName
+                                    </a>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.Product.Category))
+                                    {
+                                        <span class="badge bg-secondary">@item.Product.Category</span>
+                                    }
+                                    else { <span class="text-muted">—</span> }
+                                </td>
+                                <td class="text-center">
+                                    @if (isOut)
+                                    {
+                                        <span class="badge bg-danger fs-6">OUT OF STOCK</span>
+                                    }
+                                    else if (isLow)
+                                    {
+                                        <span class="fw-bold text-danger">@item.QuantityInStock</span>
+                                        <i class="bi bi-exclamation-triangle-fill text-warning ms-1"
+                                           title="Low stock!"></i>
+                                    }
+                                    else
+                                    {
+                                        <span class="fw-bold text-success">@item.QuantityInStock</span>
+                                    }
+                                </td>
+                                <td class="text-center text-muted">@item.LowStockThreshold</td>
+                                <td>
+                                    <small class="text-muted">
+                                        @item.LastUpdated.ToString("dd MMM yyyy")
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    <a asp-action="UpdateStock" asp-route-id="@item.Id"
+                                       class="btn btn-outline-primary btn-sm me-1"
+                                       title="Update stock quantity">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+
+                                    @*
+                                       Remove button — uses a POST form with a confirmation dialog.
+                                       onclick="return confirm(...)" shows a browser confirm popup.
+                                       If the user clicks Cancel, the form does not submit.
+                                    *@
+                                    <form asp-action="RemoveProduct" asp-route-id="@item.Id"
+                                          method="post" class="d-inline"
+                                          onsubmit="return confirm('Remove @item.Product.Name from inventory?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                title="Remove from inventory">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    @* ---- LEGEND ---- *@
+    <div class="mt-3 d-flex gap-3 small text-muted">
+        <span><span class="badge bg-danger me-1">red row</span> Out of stock</span>
+        <span><span class="badge bg-warning text-dark me-1">yellow row</span> At or below threshold</span>
+        <span><span class="badge bg-success me-1">green number</span> Healthy stock</span>
+    </div>
+}

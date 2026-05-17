@@ -1,0 +1,74 @@
+@*
+   Views/Stores/UpdateStock.cshtml
+   Simple form to update quantity in stock and low-stock threshold.
+*@
+
+@model SupplyChainMS.ViewModels.UpdateStockViewModel
+
+@{
+    ViewData["Title"] = "Update Stock";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
+        <li class="breadcrumb-item"><a asp-action="Inventory">Inventory</a></li>
+        <li class="breadcrumb-item active">Update Stock</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h4 class="mb-0">
+                    <i class="bi bi-pencil-square me-2 text-primary"></i>Update Stock
+                </h4>
+            </div>
+            <div class="card-body p-4">
+
+                @* Show what product we're updating *@
+                <div class="bg-light rounded p-3 mb-4">
+                    <p class="mb-1 fw-semibold">@Model.ProductName</p>
+                    <small class="text-muted">Supplied by @Model.SupplierName</small>
+                </div>
+
+                <form asp-action="UpdateStock" asp-route-id="@Model.InventoryItemId" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="InventoryItemId" />
+                    <input type="hidden" asp-for="ProductName" />
+                    <input type="hidden" asp-for="SupplierName" />
+
+                    <div class="mb-3">
+                        <label asp-for="QuantityInStock" class="form-label fw-semibold"></label>
+                        <input asp-for="QuantityInStock" class="form-control" type="number"
+                               min="0" autofocus />
+                        <span asp-validation-for="QuantityInStock" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="LowStockThreshold" class="form-label fw-semibold"></label>
+                        <input asp-for="LowStockThreshold" class="form-control" type="number" min="1" />
+                        <span asp-validation-for="LowStockThreshold" class="text-danger small"></span>
+                        <small class="text-muted">
+                            When stock reaches this number, the row turns red in your inventory.
+                        </small>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-floppy me-1"></i>Save
+                        </button>
+                        <a asp-action="Inventory" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

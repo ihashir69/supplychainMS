@@ -1,0 +1,85 @@
+@*
+   Views/Stores/AddProduct.cshtml
+   Form to add a product to the store's inventory for the first time.
+   The product dropdown shows only products NOT already being tracked.
+*@
+
+@model SupplyChainMS.ViewModels.AddInventoryItemViewModel
+
+@{
+    ViewData["Title"] = "Add Product to Inventory";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
+        <li class="breadcrumb-item"><a asp-action="Inventory">Inventory</a></li>
+        <li class="breadcrumb-item active">Add Product</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h4 class="mb-0">
+                    <i class="bi bi-plus-circle me-2 text-primary"></i>Add Product to Inventory
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted mb-4">
+                    Choose a product from any supplier to start tracking its stock level in your store.
+                </p>
+
+                <form asp-action="AddProduct" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="StoreId" />
+
+                    <div class="mb-3">
+                        <label asp-for="ProductId" class="form-label fw-semibold"></label>
+                        @*
+                           asp-items = the SelectList we built in the controller.
+                           This renders as a <select> dropdown.
+                        *@
+                        <select asp-for="ProductId" asp-items="ViewBag.ProductList"
+                                class="form-select">
+                            <option value="">— Select a product —</option>
+                        </select>
+                        <span asp-validation-for="ProductId" class="text-danger small"></span>
+                        <small class="text-muted">
+                            Only showing products not already in your inventory.
+                        </small>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label asp-for="QuantityInStock" class="form-label fw-semibold"></label>
+                            <input asp-for="QuantityInStock" class="form-control" type="number" min="0" />
+                            <span asp-validation-for="QuantityInStock" class="text-danger small"></span>
+                            <small class="text-muted">How many units do you have right now?</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="LowStockThreshold" class="form-label fw-semibold"></label>
+                            <input asp-for="LowStockThreshold" class="form-control" type="number" min="1" />
+                            <span asp-validation-for="LowStockThreshold" class="text-danger small"></span>
+                            <small class="text-muted">Alert me when stock drops to this level.</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i>Add to Inventory
+                        </button>
+                        <a asp-action="Inventory" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}
