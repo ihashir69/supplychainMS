@@ -21,6 +21,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SupplyChainMS.Data;
 using SupplyChainMS.Models;
+using SupplyChainMS.Services;
+using SupplyChainMS.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,6 +80,15 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
     options.ExpireTimeSpan = TimeSpan.FromDays(7);
 });
+
+// --- Application Services ---
+// "AddScoped" means: create ONE instance of this service per HTTP request.
+// The request comes in → service is created → request finishes → service is disposed.
+// This is the correct lifetime for services that use DbContext (which is also scoped).
+//
+// The pattern: whenever a controller asks for ISupplierService,
+// ASP.NET gives it a SupplierService instance automatically.
+builder.Services.AddScoped<ISupplierService, SupplierService>();
 
 // --- MVC Controllers + Razor Views ---
 // This registers the MVC pattern: Controllers handle requests,
