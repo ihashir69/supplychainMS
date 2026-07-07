@@ -277,6 +277,27 @@
             <i class="bi bi-arrow-repeat me-1"></i>Update Delivery Status
         </a>
     }
+    @* ---- MESSAGE BUTTONS ----
+       Talk about THIS delivery. Message is linked to the shipment so a
+       "Shipment #.." chip appears in the chat. Supplier/HQ can reach the
+       assigned driver; the driver can reach the supplier. *@
+    @if ((isSupplier || isHQ) && Model.Driver != null)
+    {
+        <a asp-controller="Messages" asp-action="Compose"
+           asp-route-to="@Model.Driver.UserId" asp-route-shipmentId="@Model.Id"
+           class="btn btn-outline-primary">
+            <i class="bi bi-envelope me-1"></i>Message Driver
+        </a>
+    }
+    @if (isDriver)
+    {
+        <a asp-controller="Messages" asp-action="Compose"
+           asp-route-to="@Model.Order.Supplier.UserId" asp-route-shipmentId="@Model.Id"
+           class="btn btn-outline-primary">
+            <i class="bi bi-envelope me-1"></i>Message Supplier
+        </a>
+    }
+
     <a asp-action="Index" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i>Back to Shipments
     </a>

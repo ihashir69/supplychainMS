@@ -1,0 +1,90 @@
+@* ============================================================
+   Compose.cshtml — Write a brand-new message
+   ============================================================
+   Backed by ComposeMessageViewModel. The asp-for tag helpers wire
+   each input to a property on the model AND show validation messages.
+*@
+
+@model SupplyChainMS.ViewModels.ComposeMessageViewModel
+
+@{
+    ViewData["Title"] = "New Message";
+    ViewData["ActivePage"] = "Messages";
+}
+
+@* ---- Breadcrumb ---- *@
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
+        <li class="breadcrumb-item"><a asp-action="Inbox">Inbox</a></li>
+        <li class="breadcrumb-item active" aria-current="page">New Message</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 pt-3">
+                <h4 class="mb-0"><i class="bi bi-pencil-square me-2 text-primary"></i>New Message</h4>
+            </div>
+            <div class="card-body">
+
+                @* If this message is pre-linked to an order/shipment, show it *@
+                @if (!string.IsNullOrEmpty(Model.ContextLabel))
+                {
+                    <div class="alert alert-info py-2">
+                        <i class="bi bi-link-45deg me-1"></i>@Model.ContextLabel
+                    </div>
+                }
+
+                <form asp-action="Compose" method="post">
+                    @* Anti-forgery token — CSRF protection (see Thread.cshtml note) *@
+                    @Html.AntiForgeryToken()
+
+                    @* Summary of all validation errors at the top *@
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    @* Carry the optional context links through as hidden fields *@
+                    <input type="hidden" asp-for="OrderId" />
+                    <input type="hidden" asp-for="ShipmentId" />
+
+                    @* ---- Recipient dropdown ---- *@
+                    <div class="mb-3">
+                        <label asp-for="ReceiverId" class="form-label fw-semibold"></label>
+                        <select asp-for="ReceiverId" asp-items="ViewBag.Contacts" class="form-select">
+                            <option value="">-- Choose a person --</option>
+                        </select>
+                        <span asp-validation-for="ReceiverId" class="text-danger small"></span>
+                    </div>
+
+                    @* ---- Subject ---- *@
+                    <div class="mb-3">
+                        <label asp-for="Subject" class="form-label fw-semibold"></label>
+                        <input asp-for="Subject" class="form-control" placeholder="What is this about?" />
+                        <span asp-validation-for="Subject" class="text-danger small"></span>
+                    </div>
+
+                    @* ---- Message body ---- *@
+                    <div class="mb-3">
+                        <label asp-for="Content" class="form-label fw-semibold"></label>
+                        <textarea asp-for="Content" class="form-control" rows="5"
+                                  placeholder="Type your message here..."></textarea>
+                        <span asp-validation-for="Content" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send me-1"></i>Send Message
+                        </button>
+                        <a asp-action="Inbox" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Client-side validation scripts (shows errors without a round-trip) *@
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,112 @@
+@* ============================================================
+   Inbox.cshtml — The list of conversations (like a chat list)
+   ============================================================
+   @model tells Razor what data this page receives from the controller.
+   Here it's a list of ConversationSummary — one per person we've talked to.
+*@
+
+@model List<SupplyChainMS.ViewModels.ConversationSummary>
+
+@{
+    ViewData["Title"] = "Inbox";
+    ViewData["ActivePage"] = "Messages";
+
+    // Total unread across all conversations (for the header badge)
+    var totalUnread = Model.Sum(c => c.UnreadCount);
+}
+
+@* ---- Breadcrumb ---- *@
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Inbox</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">
+            <i class="bi bi-envelope me-2 text-primary"></i>Inbox
+            @if (totalUnread > 0)
+            {
+                <span class="badge bg-danger rounded-pill">@totalUnread new</span>
+            }
+        </h2>
+        <p class="text-muted mb-0">@Model.Count conversation(s)</p>
+    </div>
+
+    @* Quick action: start a new message *@
+    <a asp-action="Compose" class="btn btn-primary">
+        <i class="bi bi-pencil-square me-1"></i>New Message
+    </a>
+</div>
+
+@if (!Model.Any())
+{
+    @* Empty state — friendly message when there are no conversations yet *@
+    <div class="text-center py-5">
+        <i class="bi bi-inbox display-1 text-muted"></i>
+        <h4 class="mt-3 text-muted">No messages yet</h4>
+        <p class="text-muted">Start a conversation with a supplier, store manager, or driver.</p>
+        <a asp-action="Compose" class="btn btn-primary mt-2">
+            <i class="bi bi-pencil-square me-1"></i>Write your first message
+        </a>
+    </div>
+}
+else
+{
+    <div class="card shadow-sm border-0">
+        <div class="list-group list-group-flush">
+            @foreach (var c in Model)
+            {
+                @* Each conversation is a clickable row that opens the thread *@
+                <a asp-action="Thread" asp-route-partnerId="@c.PartnerId"
+                   class="list-group-item list-group-item-action py-3 @(c.UnreadCount > 0 ? "bg-light" : "")">
+                    <div class="d-flex w-100 align-items-center">
+
+                        @* Avatar circle with the partner's first initial *@
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3"
+                             style="width: 44px; height: 44px; flex-shrink: 0; font-weight: 600;">
+                            @(string.IsNullOrEmpty(c.PartnerName) ? "?" : c.PartnerName.Substring(0, 1).ToUpper())
+                        </div>
+
+                        <div class="flex-grow-1 min-width-0">
+                            <div class="d-flex justify-content-between">
+                                <h6 class="mb-1 @(c.UnreadCount > 0 ? "fw-bold" : "")">
+                                    @c.PartnerName
+                                    @* Small role tag next to the name *@
+                                    @{
+                                        var roleClass = c.PartnerRole switch
+                                        {
+                                            "Supplier" => "bg-warning text-dark",
+                                            "StoreManager" => "bg-success",
+                                            "Driver" => "bg-info text-dark",
+                                            _ => "bg-secondary"
+                                        };
+                                    }
+                                    <span class="badge @roleClass ms-1" style="font-size: 0.65rem;">@c.PartnerRole</span>
+                                </h6>
+                                <small class="text-muted">@c.LastSentAt.ToString("dd MMM, HH:mm")</small>
+                            </div>
+
+                            @* Preview of the last message. "You: " prefix if I sent it. *@
+                            <p class="mb-0 text-truncate @(c.UnreadCount > 0 ? "text-dark" : "text-muted")" style="max-width: 600px;">
+                                @if (c.LastFromMe)
+                                {
+                                    <span class="text-muted">You: </span>
+                                }
+                                @c.LastMessage
+                            </p>
+                        </div>
+
+                        @* Unread count badge on the right *@
+                        @if (c.UnreadCount > 0)
+                        {
+                            <span class="badge bg-danger rounded-pill ms-2">@c.UnreadCount</span>
+                        }
+                    </div>
+                </a>
+            }
+        </div>
+    </div>
+}

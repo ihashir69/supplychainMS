@@ -6,8 +6,23 @@
 
 @using Microsoft.AspNetCore.Identity
 @using SupplyChainMS.Models
+@using SupplyChainMS.Services.Interfaces
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
+@* Injecting the message service here lets EVERY page show the unread
+   count in the sidebar (like the little number on an email icon). *@
+@inject IMessageService MessageService
+
+@{
+    // Work out the current user's unread message count ONCE, so we can
+    // show a red badge next to the "Inbox" link. Only bother if logged in.
+    var unreadMessages = 0;
+    if (SignInManager.IsSignedIn(User))
+    {
+        var uid = UserManager.GetUserId(User);
+        if (uid != null) { unreadMessages = await MessageService.GetUnreadCountAsync(uid); }
+    }
+}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -188,9 +203,14 @@
                         <span class="px-3 text-muted small text-uppercase fw-bold">Communication</span>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link @(ViewData["ActivePage"]?.ToString() == "Messages" ? "active fw-bold" : "text-secondary")"
+                        <a class="nav-link d-flex align-items-center @(ViewData["ActivePage"]?.ToString() == "Messages" ? "active fw-bold" : "text-secondary")"
                            asp-controller="Messages" asp-action="Inbox">
                             <i class="bi bi-envelope me-2"></i>Inbox
+                            @* Red unread badge — only shown when there's something new *@
+                            @if (unreadMessages > 0)
+                            {
+                                <span class="badge bg-danger rounded-pill ms-auto">@unreadMessages</span>
+                            }
                         </a>
                     </li>
 
@@ -200,21 +220,10 @@
             @* ---- MAIN CONTENT AREA ---- *@
             <main class="col-md-10 ms-sm-auto px-4 py-4">
 
-                @* Flash messages — shown after a redirect (TempData survives one redirect) *@
-                @if (TempData["Success"] != null)
-                {
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                }
-                @if (TempData["Error"] != null)
-                {
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                }
+                @* Flash messages are now shown as "toasts" (little pop-up
+                   notifications in the corner). See the toast container near
+                   the bottom of this file. TempData survives ONE redirect,
+                   which is exactly how long a flash message needs to live. *@
 
                 @RenderBody()
             </main>
@@ -228,6 +237,36 @@
         }
 
     </div>
+</div>
+
+@* ---- TOAST NOTIFICATIONS ----
+   A "toast" is a small message that slides in, shows for a few seconds,
+   then fades away — like a phone notification. We put success/error
+   flash messages here. They live in a fixed container in the top-right
+   corner so they float above the page content. *@
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1200; margin-top: 70px;">
+    @if (TempData["Success"] != null)
+    {
+        <div class="toast align-items-center text-white bg-success border-0 app-toast" role="alert" data-bs-delay="4000">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="toast align-items-center text-white bg-danger border-0 app-toast" role="alert" data-bs-delay="6000">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    }
 </div>
 
 <!-- jQuery -->
