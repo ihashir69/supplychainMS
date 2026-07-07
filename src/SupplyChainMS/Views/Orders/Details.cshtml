@@ -227,6 +227,28 @@
         </a>
     }
 
+    @* ---- MESSAGE BUTTON ----
+       Lets the two parties talk about THIS order. The message gets linked
+       to the order (orderId) so it shows an "Order #.." chip in the chat.
+       HQ messages the supplier; the supplier messages the branch contact
+       (only if that branch actually has a contact user assigned). *@
+    @if (isManager)
+    {
+        <a asp-controller="Messages" asp-action="Compose"
+           asp-route-to="@Model.Supplier.UserId" asp-route-orderId="@Model.Id"
+           class="btn btn-outline-primary">
+            <i class="bi bi-envelope me-1"></i>Message Supplier
+        </a>
+    }
+    else if (isSupplier && !string.IsNullOrEmpty(Model.Store.ManagerUserId))
+    {
+        <a asp-controller="Messages" asp-action="Compose"
+           asp-route-to="@Model.Store.ManagerUserId" asp-route-orderId="@Model.Id"
+           class="btn btn-outline-primary">
+            <i class="bi bi-envelope me-1"></i>Message Branch
+        </a>
+    }
+
     <a asp-action="Index" class="btn btn-outline-secondary ms-auto">
         <i class="bi bi-arrow-left me-1"></i>Back to Orders
     </a>

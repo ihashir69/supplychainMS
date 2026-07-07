@@ -1,0 +1,37 @@
+# ============================================================
+# render.yaml — tells Render.com how to host this app
+# ============================================================
+#
+# Render.com is a free hosting service. When you connect your GitHub repo,
+# Render reads THIS file to know what to build and run. This is called
+# "Infrastructure as Code" — your hosting setup lives in the repo, not in
+# a dashboard you have to remember to configure by hand.
+
+services:
+  # A "web" service = something that serves web pages over the internet.
+  - type: web
+    name: supplychainms
+    # "docker" = build using our Dockerfile (see the file at repo root).
+    runtime: docker
+    # Free tier — perfect for a university project (sleeps when idle).
+    plan: free
+    # After each deploy, Render pings this URL to confirm the app is alive.
+    # This maps to app.MapHealthChecks("/health") in Program.cs.
+    healthCheckPath: /health
+    # Auto-redeploy whenever you push to this branch on GitHub.
+    branch: main
+    envVars:
+      # --- The database connection string ---
+      # "sync: false" means: DON'T store the value in this file (it's a
+      # secret — the DB password!). Instead you type it ONCE into the
+      # Render dashboard, and Render injects it as an environment variable.
+      # Program.cs reads it via GetConnectionString("DefaultConnection").
+      # The double underscore (__) is how .NET maps env vars to nested
+      # config keys: ConnectionStrings__DefaultConnection.
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+
+      # Tells ASP.NET to run in "Production" mode (friendly error pages,
+      # HTTPS enforcement, etc. — see the if-block in Program.cs).
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production

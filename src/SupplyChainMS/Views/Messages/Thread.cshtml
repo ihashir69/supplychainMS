@@ -1,0 +1,144 @@
+@* ============================================================
+   Thread.cshtml — The chat view with ONE person
+   ============================================================
+   Shows every message between me and the partner, oldest at top,
+   newest at bottom (like a messaging app), plus a reply box.
+
+   The controller passes:
+     - Model         = the list of messages (oldest → newest)
+     - ViewBag.Partner        = the other person (ApplicationUser)
+     - ViewBag.CurrentUserId  = my user id (to tell which bubble is mine)
+*@
+
+@model List<SupplyChainMS.Models.Message>
+
+@{
+    ViewData["Title"] = "Conversation";
+    ViewData["ActivePage"] = "Messages";
+
+    var partner = ViewBag.Partner as SupplyChainMS.Models.ApplicationUser;
+    string currentUserId = ViewBag.CurrentUserId ?? "";
+
+    var roleClass = partner?.Role switch
+    {
+        "Supplier" => "bg-warning text-dark",
+        "StoreManager" => "bg-success",
+        "Driver" => "bg-info text-dark",
+        _ => "bg-secondary"
+    };
+}
+
+@* ---- Breadcrumb ---- *@
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
+        <li class="breadcrumb-item"><a asp-action="Inbox">Inbox</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@partner?.FullName</li>
+    </ol>
+</nav>
+
+@* ---- Conversation header ---- *@
+<div class="card shadow-sm border-0 mb-3">
+    <div class="card-body d-flex align-items-center">
+        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3"
+             style="width: 48px; height: 48px; font-weight: 600;">
+            @(string.IsNullOrEmpty(partner?.FullName) ? "?" : partner!.FullName.Substring(0, 1).ToUpper())
+        </div>
+        <div>
+            <h5 class="mb-0">@partner?.FullName <span class="badge @roleClass ms-1">@partner?.Role</span></h5>
+            <small class="text-muted">@partner?.Email</small>
+        </div>
+        <a asp-action="Inbox" class="btn btn-outline-secondary btn-sm ms-auto">
+            <i class="bi bi-arrow-left me-1"></i>Back to Inbox
+        </a>
+    </div>
+</div>
+
+@* ---- The message bubbles ---- *@
+<div class="card shadow-sm border-0 mb-3">
+    <div class="card-body" style="max-height: 60vh; overflow-y: auto;" id="messageScroll">
+        @if (!Model.Any())
+        {
+            <p class="text-center text-muted py-4">No messages yet. Say hello below!</p>
+        }
+        else
+        {
+            @foreach (var m in Model)
+            {
+                // Is this message from ME? Mine go on the right (blue),
+                // the other person's go on the left (grey) — like any chat app.
+                var mine = m.SenderId == currentUserId;
+                <div class="d-flex mb-3 @(mine ? "justify-content-end" : "justify-content-start")">
+                    <div class="@(mine ? "bg-primary text-white" : "bg-light text-dark") rounded p-2 px-3 shadow-sm"
+                         style="max-width: 70%;">
+
+                        @* If the message is linked to an order/shipment, show a context chip *@
+                        @if (m.OrderId != null)
+                        {
+                            <div class="mb-1">
+                                <a asp-controller="Orders" asp-action="Details" asp-route-id="@m.OrderId"
+                                   class="badge bg-white text-primary text-decoration-none">
+                                    <i class="bi bi-receipt me-1"></i>Order #@m.OrderId
+                                </a>
+                            </div>
+                        }
+                        @if (m.ShipmentId != null)
+                        {
+                            <div class="mb-1">
+                                <a asp-controller="Shipments" asp-action="Details" asp-route-id="@m.ShipmentId"
+                                   class="badge bg-white text-primary text-decoration-none">
+                                    <i class="bi bi-truck me-1"></i>Shipment #@m.ShipmentId
+                                </a>
+                            </div>
+                        }
+
+                        @* The message text. white-space:pre-wrap keeps line breaks the user typed. *@
+                        <div style="white-space: pre-wrap;">@m.Content</div>
+
+                        <div class="text-end mt-1">
+                            <small class="@(mine ? "text-white-50" : "text-muted")" style="font-size: 0.7rem;">
+                                @m.SentAt.ToString("dd MMM, HH:mm")
+                                @if (mine && m.IsRead)
+                                {
+                                    <i class="bi bi-check2-all ms-1" title="Read"></i>
+                                }
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@* ---- Reply box ---- *@
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        @* This form posts to MessagesController.Reply *@
+        <form asp-action="Reply" method="post">
+            @* Anti-forgery token — a hidden security field that proves this
+               form really came from our site (protects against CSRF attacks). *@
+            @Html.AntiForgeryToken()
+
+            @* Hidden field: who we're replying to *@
+            <input type="hidden" name="receiverId" value="@partner?.Id" />
+
+            <div class="input-group">
+                <textarea name="content" class="form-control" rows="2"
+                          placeholder="Type your message..." required></textarea>
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="bi bi-send me-1"></i>Send
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* ---- Auto-scroll to the newest message when the page loads ---- *@
+@section Scripts {
+    <script>
+        // Jump the message list to the bottom so the latest reply is visible.
+        var scroll = document.getElementById('messageScroll');
+        if (scroll) { scroll.scrollTop = scroll.scrollHeight; }
+    </script>
+}

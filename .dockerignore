@@ -1,0 +1,28 @@
+# ============================================================
+# .dockerignore — files Docker should NOT copy into the build
+# ============================================================
+# Just like .gitignore keeps junk out of git, this keeps junk out of the
+# Docker build. Skipping these makes the build faster AND avoids accidentally
+# baking secrets or build leftovers into the container image.
+
+# Build output — the container compiles fresh, so we don't need local builds
+**/bin/
+**/obj/
+
+# IDE / editor folders
+.vs/
+.idea/
+.claude/
+
+# Git internals
+.git/
+.gitignore
+
+# ⚠️ NEVER ship secrets into the image — the DB password is set as an
+# environment variable on Render instead (see render.yaml).
+**/appsettings.Development.json
+**/appsettings.Developement.json
+
+# Docs and progress notes aren't needed to run the app
+progress/
+*.md

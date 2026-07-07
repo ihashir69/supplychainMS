@@ -93,11 +93,18 @@ builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IStoreService, StoreService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IShipmentService, ShipmentService>();
+builder.Services.AddScoped<IMessageService, MessageService>();
 
 // --- MVC Controllers + Razor Views ---
 // This registers the MVC pattern: Controllers handle requests,
 // Views (Razor .cshtml files) render the HTML response.
 builder.Services.AddControllersWithViews();
+
+// --- Health Checks ---
+// A "health check" is a simple endpoint the hosting platform (Render.com)
+// can ping to ask "is the app alive?". If it answers, Render knows the
+// deploy succeeded and keeps the service running. We expose it at /health.
+builder.Services.AddHealthChecks();
 
 // ============================================================
 // PART 2: Build the app and configure the HTTP pipeline
@@ -168,5 +175,10 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// --- Health Check Endpoint ---
+// Render.com pings GET /health after deploying. If it returns 200 OK,
+// Render marks the deploy healthy. No login required — it's a public ping.
+app.MapHealthChecks("/health");
 
 app.Run();
