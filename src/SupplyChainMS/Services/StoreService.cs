@@ -54,11 +54,16 @@ public class StoreService : IStoreService
     // -------------------------------------------------------
     // Get all active stores
     // -------------------------------------------------------
+    // We also load InventoryItems here (just the quantity/threshold
+    // numbers, no Product/Supplier details needed) so the branch
+    // directory cards can show a quick stock-level summary without
+    // a separate database trip per store.
     public async Task<List<Store>> GetAllActiveAsync()
     {
         return await _context.Stores
             .Where(s => s.IsActive)
             .Include(s => s.Manager)
+            .Include(s => s.InventoryItems)
             .AsNoTracking()
             .OrderBy(s => s.Name)
             .ToListAsync();
